@@ -1,0 +1,17 @@
+data: 
+  input_path: 'data/vehicles_us.csv'
+  sample: 0.1
+  encoding: 'utf-8' 
+
+eda: 
+  representative_columns: ['model', 'price']
+  plots: 
+    histogram_bins: 30 #10-30
+    color_palette: 'viridis'
+    plotly_template: 'plotly_white'
+  thresholds: 
+    null_threshold: 0.6
+    outlier_threshold: 3
+  output: 
+    report_name: 'eda_report'
+    save_plots: True
