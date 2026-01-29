@@ -1,5 +1,5 @@
 data: 
-  input_path: 'data/vehicles_us.csv'
+  input_path: 'data/vehicles_us.csv' #Just accept csv files
   sample: 0.1
   encoding: 'utf-8' 
 
@@ -7,11 +7,10 @@ eda:
   representative_columns: ['model', 'price']
   plots: 
     histogram_bins: 30 #10-30
-    color_palette: 'viridis'
+    color_palette: 'Viridis'
     plotly_template: 'plotly_white'
   thresholds: 
     null_threshold: 0.6
-    outlier_threshold: 3
   output: 
-    report_name: 'eda_report'
+    report_name: 'eda_report.txt'
     save_plots: True
