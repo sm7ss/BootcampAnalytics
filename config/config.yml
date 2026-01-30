@@ -12,5 +12,5 @@ eda:
   thresholds: 
     null_threshold: 0.6
   output: 
-    report_name: 'eda_report.txt'
+    report_name: 'analysis_report.txt'
     save_plots: True
