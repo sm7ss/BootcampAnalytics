@@ -4,13 +4,42 @@ data:
   encoding: 'utf-8' 
 
 eda: 
-  representative_columns: ['model', 'price']
-  plots: 
-    histogram_bins: 30 #10-30
-    color_palette: 'Viridis'
-    plotly_template: 'plotly_white'
   thresholds: 
     null_threshold: 0.6
+
+analysis_config: 
+  plots: 
+      histogram_bins: 30 #10-30
+      color_palette: 'Viridis'
+      plotly_template: 'plotly_white'
   output: 
-    report_name: 'analysis_report.txt'
+    report_folder_name: 'analysis_report'
     save_plots: True
+    insights_json_name: 'json_insights.json'
+    save_insights: True
+
+data_analysis: 
+  representative_columns: 
+    - model
+    - price
+  auto_insights: True
+  insight_questions: 
+    - id: distribution
+      enable: True
+      columns: []
+    - id: outliers
+      enable: True
+      method: 'iqr'
+      columns: []
+    - id: correlation
+      enable: True
+      min_numeric_col: 2
+      columns: []
+    - id: category_dominance
+      enable: True
+      top_n: 10
+      rare_threshold: 0.01
+      columns: []
+
+
+
