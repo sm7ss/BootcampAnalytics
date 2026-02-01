@@ -12,4 +12,6 @@ class encoding_strategy(str, Enum):
     ASCII= 'ascii'
     LATIN1= 'latin-1'
 
+class outliers_strategy(str, Enum): 
+    IQR= 'iqr'
 
