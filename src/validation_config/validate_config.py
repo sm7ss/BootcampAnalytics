@@ -103,8 +103,8 @@ class validation(BaseModel):
         if isinstance(columnas, list): 
             for col in columnas: 
                 if col not in columns_frame: 
-                    logger.error(f'The column {col} is not in the schema. Existing columns:\n{columns}')
-                    raise ValueError(f'The column {col} is not in the schema. Existing columns:\n{columns}')
+                    logger.error(f'The column {col} is not in the schema. Existing columns:\n{columns_frame}')
+                    raise ValueError(f'The column {col} is not in the schema. Existing columns:\n{columns_frame}')
         elif isinstance(columnas, str): 
             if columnas not in columns_frame: 
                 logger.error(f'The column {columnas} is not in the schema. Existing columns:\n{columns}')
@@ -117,12 +117,12 @@ class validation(BaseModel):
             columns= insight_questions[i].get('columns')
             
             if enable is None: 
-                logger.eror(f'There must be an "enable" field in {id_insights}')
+                logger.error(f'There must be an "enable" field in {id_insights}')
                 raise ValueError(f'There must be an "enable" field in {id_insights}')
             if not isinstance(columns, list): 
                 logger.error('The "columns" field must be a list')
                 raise ValueError('The "columns" field must be a list')
-
+            
             if not columns: 
                 if id_insights == 'distribution':
                     logger.warning(f'There must be a "columns" field in {id_insights}. The analysis will have all the columns')
@@ -146,10 +146,27 @@ class validation(BaseModel):
                     logger.error(f'There cannot be fields other than: "distribution", "outliers", "correlation", and "category_dominance"')
                     raise ValueError(f'There cannot be fields other than: "distribution", "outliers", "correlation", and "category_dominance"')
             else: 
-                for col in columns: 
-                    if col not in columns_frame: 
-                        logger.error(f'The column {columnas} is not in the schema. Existing columns:\n{columns}')
-                        raise ValueError(f'The column {columnas} is not in the schema. Existing columns:\n{columns}')
+                if id_insights == 'distribution':
+                    for col in columns: 
+                        if col not in columns_frame: 
+                            logger.error(f'The column {col} isnt in the schema.\nAvailable columns: {columns_frame}')
+                            raise ValueError(f'The column {col} isnt in the schema.\nAvailable columns: {columns_frame}')
+                if id_insights == 'outliers':
+                    for col in columns: 
+                        if col not in num: 
+                            logger.error(f'The column {col} must be a numeric column.\nNumeric columns: {num}')
+                            raise ValueError(f'The column {col} must be a numeric column.\nNumeric columns: {num}')
+                elif id_insights == 'correlation':
+                    if enable: 
+                        for col in columns: 
+                            if col not in num: 
+                                logger.error(f'The column {col} must be a numeric column.\nNumeric columns: {num}')
+                                raise ValueError(f'The column {col} must be a numeric column.\nNumeric columns: {num}')
+                elif id_insights == 'category_dominance':
+                    for col in columns: 
+                        if col not in cat: 
+                            logger.error(f'The column {col} must be a categorical column.\nCategorical columns: {cat}')
+                            raise ValueError(f'The column {col} must be a categorical column.\nCategorical columns: {cat}')
             
             if id_insights == 'distribution': 
                 continue
