@@ -100,6 +100,8 @@ class validation(BaseModel):
         cat= [col for col in frame.select(pl.selectors.string()).columns]
         num= [col for col in frame.select(pl.selectors.numeric()).columns]
         
+        metodos_outlier= [stra.value for stra in outliers_strategy]
+        
         if isinstance(columnas, list): 
             for col in columnas: 
                 if col not in columns_frame: 
@@ -175,6 +177,9 @@ class validation(BaseModel):
                 if not method: 
                     logger.error(f'There must be a "method" field for {id_insights}')
                     raise ValueError(f'There must be a "method" field for {id_insights}')
+                if method not in metodos_outlier: 
+                    logger.error(f'The strategy method {method} is not available.\nAvailable outlier methods: {metodos_outlier}')
+                    raise ValueError(f'The strategy method {method} is not available.\nAvailable outlier methods: {metodos_outlier}')
             elif id_insights == 'correlation': 
                 min_numeric_col= insight_questions[i].get('min_numeric_col')
                 if not min_numeric_col: 
