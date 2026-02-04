@@ -331,8 +331,6 @@ class CategoryDominance:
         fig.write_html(path, include_plotlyjs="cdn")
         return path
     
-    
-    
     def categorical(self, save_plot: Callable, auto_insights: bool= False) -> Union[Dict[str, Any], List[str]]: 
         columns= self.category.get('columns')
         top_n= self.category.get('top_n')
@@ -345,21 +343,61 @@ class CategoryDominance:
         save_plots= self.config.output.save_plots
         save_insights= self.config.output.save_insights
         
+        if save_plots: 
+            ruta= Path(__file__).resolve().parent.parent.parent
+            now= datetime.now().strftime('%Y-%m-%d')
+            path= ruta / f'categories_{now}'
+            path.mkdir(parents=True, exist_ok=True) 
+        
         for col in columns: 
             top= self.frame[col].value_count().sort('counts', descending=True).limit(top_n)
-            fig= self.plot(top=top, col=col, n_bins=n_bins)
+            top_labels= [row[0] for row in top.rows()]
             
-            if self.config.output.save_plots: 
-                save_plot(fig=fig, name=f'distribution_{col}.html')
+            if auto_insights: 
+                logger.info(f'{col}: top=\n{top}')
+            else: 
+                logger.warning(f'The insight for column {col} was not generated in the console. It was not generated because auto_insights is False')
             
-            #Rare catefories
+            if save_insights:
+                logger.info(f'{col}: top=\n{top}') 
+                ins= f'- {col}: top= {top}'
+                insights.append(ins)
+            else: 
+                logger.warning(f'The insights for column {col} were not saved because save_insights is False')
+            
+            if save_plots: 
+                json_field[col]={
+                    'top_labs': top_labels,
+                    f'top_{top_n}_cat': top
+                }
+                fig= self.plot(top=top, col=col, n_bins=n_bins)
+                json_field[col]['plots']= str(save_plot(fig=fig, name=f'category_{col}.html'))
+            else: 
+                logger.warning(f'The plot for the column {col} was not saved because save_plots is False')
+            
+            #Rare categories
             total= self.frame.height
             rare_count= self.frame[col].value_count().filter(pl.col('counts') < total*rare_threshold).height
             if rare_count > 0: 
                 
-                #LOGGER HERE
+                if auto_insights: 
+                    logger.info(f'{col}: {rare_count} rare categories (<{rare_threshold*100}%)')
+                else: 
+                    logger.warning(f'The insight for column {col} was not generated in the console. It was not generated because auto_insights is False')
                 
-                pass
+                if save_insights:
+                    ins= f'- {col}: {rare_count} rare categories (<{rare_threshold*100}%)'
+                    insights.append(ins)
+                else: 
+                    logger.warning(f'The insights for column {col} were not saved because save_insights is False')
+                
+                if save_plots: 
+                    json_field[col]={
+                        'rare_category': rare_count
+                    }
+                else: 
+                    logger.warning(f'The plot for the column {col} was not saved because save_plots is False')
+            return [json_field, insights]
 
 
 class AnalsisData: 
