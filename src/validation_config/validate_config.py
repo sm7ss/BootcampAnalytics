@@ -59,6 +59,8 @@ class output_validation(BaseModel):
         path= Path(v)
         
         path.mkdir(parents=True, exist_ok=True)
+        json_path= path / 'json_analysis'
+        json_path.mkdir(parents=True, exist_ok=True)
         return path
     
     @field_validator('insights_json_name')
