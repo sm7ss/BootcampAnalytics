@@ -5,6 +5,7 @@ import polars as pl
 from typing import Dict, Any, Union, List, Optional
 from pathlib import Path
 from datetime import datetime
+import json
 
 import logging
 
@@ -37,6 +38,19 @@ class FoldersAndFiles:
         path= self.report_folder_name / folder_name / name
         fig.write_html(path, include_plotlyjs="cdn")
         return path
+    
+    def json_save(self, dict_ins: Dict[str, Any], encoding: str='utf-8') -> None: 
+        resolve= Path(__file__).resolve().parent.parent.parent 
+        path= resolve / 'analysis_report' / 'json_analysis' 
+        file= path / self.insights_json_name
+        
+        try:
+            with open(file, 'w', encoding=encoding) as f: 
+                json.dump(dict_ins, f, indent=4, ensure_ascii=False)
+            logger.info(f'Json report was written succesfully')
+        except Exception as e: 
+            logger.error(f'An error occurred while trying to write the JSON report {self.insights_json_name}. Error:\n{e}')
+            raise ValueError(f'An error occurred while trying to write the JSON report {self.insights_json_name}. Error:\n{e}')
 
 class Plots: 
     def __init__(self, config: Dict[str, Any]):
@@ -191,7 +205,7 @@ class OperationAnalysis:
         logger.info(f'The describe of numeric column {col} was obtained correctly')
         return [mean, median, std, stat, skew]
     
-    def unique_val(self, col: str) -> List[int, pl.DataFrame]: 
+    def unique_val(self, col: str) -> Union[int, pl.DataFrame]: 
         n= self.frame[col].n_unique()
         frame= self.frame[col].value_counts().sort('count', descending=True)
         logger.info(f'The unique data value for column {col} was obtained correctly')
@@ -245,6 +259,7 @@ class OperationAnalysis:
 class AnalysisData: 
     def __init__(self, frame: pl.DataFrame, config: Dict[str, Any]):
         self.frame= frame
+        self.encoding= config.data.encoding
         
         self.analysis_config= config.analysis_config
         self.data_analysis= config.data_analysis
@@ -256,13 +271,13 @@ class AnalysisData:
         self.in_list= []
         self.in_dict= {}
     
-    def save(self, 
+    def dict_list_fill(self, 
             col: Union[str, List[str]], 
             analysis: str, 
             insight: Union[List[str], str], 
             insight_save: Union[List[str], str], 
             plot: Optional[go.Figure], 
-            json: Dict[str, Any]): 
+            json: Dict[str, Any]) -> Optional[bool]: 
         save_plots= self.analysis_config.save_plots
         save_insights= self.analysis_config.save_insights
         auto_insights= self.data_analysis.auto_insights
@@ -270,31 +285,32 @@ class AnalysisData:
         num=0
         
         if auto_insights: 
-            pass
+            insight
         else: 
             logger.warning(f'The insight were not generated in the console. It was not generated because auto_insights is False')
             num+=1
-        #AUTO-INSIGHTS
         
         if save_insights:
-            pass
+            self.in_list.append(insight_save)
         else: 
             logger.warning(f'The insights were not saved because save_insights is False')
             num+=1
-        #SAVE-INSIGHTS
         
         if save_plots:
-            pass
+            plo= plot
+            str_path= self.folder.save_plot(fig=plo, analysis=analysis, name=f'{analysis}_{col}.html')
+            self.in_dict[analysis]= {}
+            self.in_dict[analysis][col]= json
+            self.in_dict[analysis][col]['analysis_path']= str(str_path)
         else: 
             logger.warning(f'The plot was not saved because save_plots is False')
             num+=1
-        #SAVE PLOTS
         
         if num==3: 
             logger.warning(f'No {analysis} analysis is available for the data')
             return True
     
-    def distribution(self, distribution_dic: Dict[str, Any]): 
+    def distribution(self, distribution_dic: Dict[str, Any]) -> None: 
         enable= distribution_dic.get('enable')
         columns= distribution_dic.get('columns')
         
@@ -323,7 +339,7 @@ class AnalysisData:
                     median=median, 
                     mean=mean
                 )
-                r= self.save(
+                r= self.dict_list_fill(
                     col=col, 
                     analysis='distribution', 
                     insight=insight, 
@@ -342,7 +358,7 @@ class AnalysisData:
                     col=col
                 )
                 json_save= JsonSaveInsights.distribution_cat_data(col=col, n_unique=unique)
-                r= self.save(
+                r= self.dict_list_fill(
                     col=col, 
                     analysis='distribution', 
                     insight=insight, 
@@ -355,7 +371,7 @@ class AnalysisData:
             else: 
                 logger.warning(f'Column "{col}" is not a numeric or categoric column')
     
-    def outliers(self, outliers_dic: Dict[str, Any]): 
+    def outliers(self, outliers_dic: Dict[str, Any]) -> None: 
         enable= outliers_dic.get('enable')
         method= outliers_dic.get('method')
         columns= outliers_dic.get('columns')
@@ -371,7 +387,7 @@ class AnalysisData:
                 insights_save= SaveInsights.insights_outlier(col=col, n_out=n_out, pct_out=pct_out)
                 plots= self.plots.outlier_plot(frame=frame, col=col, n_out=n_out)
                 json_save= JsonSaveInsights.outlier_data(col=col, n_out=n_out, pct_out=pct_out)
-                r= self.save(
+                r= self.dict_list_fill(
                     col=col, 
                     analysis='outliers', 
                     insight=insight, 
@@ -385,7 +401,7 @@ class AnalysisData:
                 logger.error(f'No method {method} available')
                 raise
     
-    def correlation(self, correlation_dic: Dict[str, Any]):
+    def correlation(self, correlation_dic: Dict[str, Any]) -> None:
         enable= correlation_dic.get('enable')
         columns= correlation_dic.get('columns')
         
@@ -409,7 +425,7 @@ class AnalysisData:
             col_b=col_b, 
             r_val=r_val
         )
-        self.save(
+        self.dict_list_fill(
             col=columns, 
             analysis='correlation', 
             insight=insight, 
@@ -418,7 +434,7 @@ class AnalysisData:
             json=json_save
         )
     
-    def category_dominance(self, category_dom_dict: Dict[str, Any]): 
+    def category_dominance(self, category_dom_dict: Dict[str, Any]) -> None: 
         enable= category_dom_dict.get('enable')
         top_n= category_dom_dict.get('top_n')
         rare_threshold= category_dom_dict.get('rare_threshold')
@@ -456,7 +472,7 @@ class AnalysisData:
                 top=frame_top, 
                 rare_count=rare_n
             )
-            r= self.save(
+            r= self.dict_list_fill(
                 col=col, 
                 analysis='CategoryDominance', 
                 insight=insight, 
@@ -467,13 +483,24 @@ class AnalysisData:
             if r:
                 break
     
-    def run_analysis(): 
-        pass
-    
-    
-    
-    
-    
-    
-    
+    def run_analysis(self) -> List[str]: 
+        ins_q= self.data_analysis.insight_questions
+        
+        for i in range(len(ins_q)): 
+            ins= ins_q[i].get('id')
+            if ins == 'distribution': 
+                self.distribution(distribution_dic=ins_q[i])
+            elif ins == 'outliers': 
+                self.outliers(outliers_dic=ins_q[i])
+            elif ins == 'correlation': 
+                self.correlation(correlation_dic=ins_q[i])
+            elif ins == 'category_dominance': 
+                self.category_dominance(category_dom_dict=ins_q[i])
+            else: 
+                logger.error(f'{ins} analysis doesnt exist')
+                raise ValueError(f'{ins} analysis doesnt exist')
+        
+        self.folder.json_save(dict_ins=self.in_dict, encoding=self.encoding)
+        
+        return self.in_list
 
