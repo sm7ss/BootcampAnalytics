@@ -1,6 +1,8 @@
 import plotly.express as px
+import plotly.graph_objects as go
+
 import polars as pl 
-from typing import Dict, Any, Union, List, Callable
+from typing import Dict, Any, Union, List, Optional
 from pathlib import Path
 from datetime import datetime
 
@@ -9,157 +11,191 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(levelname)s-%(message)s')
 logger= logging.getLogger(__name__)
 
-# Auto-insight para mostrar, y save insights si config=True
-
-class DistributionData: 
-    def __init__(self, frame: pl.DataFrame, distribution: Dict[str, Any], config: Dict[str, Any]):
-        self.frame= frame
-        self.config= config
-        self.distribution= distribution
+class FoldersAndFiles: 
+    def __init__(self, config: Dict[str, Any]):
+        self.report_folder_name= config.report_folder_name
+        self.insights_json_name= config.insights_json_name
     
-    def plot(self, col: str, n_bins: int): 
+    def date_folder(self) -> Dict[str, Any]: 
+        ruta= Path(__file__).resolve().parent.parent.parent
+        now= datetime.now().strftime('%Y-%m-%d')
         
+        folder_analysis= f'analysis_{now}'
+        path= ruta / folder_analysis
+        path.mkdir(parents=True, exist_ok=True) 
+        
+        return str(path)
+    
+    def analysis_folder(self,analysis: str) -> str: 
+        ruta= self.date_folder()
+        nueva_ruta= ruta / analysis
+        nueva_ruta.mkdir(parents=True, exist_ok=True)
+        return nueva_ruta
+    
+    def save_plot(self, fig: go.Figure, analysis: str, name: str) -> str:
+        folder_name= self.analysis_folder(analysis=analysis)
+        path= self.report_folder_name / folder_name / name
+        fig.write_html(path, include_plotlyjs="cdn")
+        return path
+
+class Plots: 
+    def __init__(self, config: Dict[str, Any]):
+        self.n_bins= config.histogram_bins
+        self.color_palet= config.color_palette
+        self.template= config.plotly_template
+    
+    def distribution_plot(self, frame: pl.DataFrame, col: str) -> go.Figure: 
+        logger.info(f'Histogram plot for column "{col}" was created')
         return px.histogram(
-            self.frame, 
+            frame, 
             x=col, 
-            nbins=n_bins, 
+            nbins=self.n_bins, 
             title=f'Distribution: {col}'
         )
     
-    def describe_data(self, col: str) -> List[float]: 
-        stat= self.frame[col].describe()
-        
-        mean= float(stat.filter(pl.col('statistic')=='mean')['value'].item())
-        median= float(stat.filter(pl.col('statistic')=='50%')['value'].item())
-        std= float(stat.filter(pl.col('statistic')=='std')['value'].item())
-        
-        return [mean, median, std, stat]
+    def bar(self, frame: pl.DataFrame, col: str) -> go.Figure: 
+        logger.info(f'Bar plot for column "{col}" was created')
+        return px.bar(
+            frame, 
+            x=col, 
+            y='count', 
+            color_discrete_sequence=self.color_palet, 
+            template=self.template, 
+            title=f'Top categories in "{col}"'
+        )
     
-    def save_json_file_num_data(self, col: str) -> Dict[str, Any]:
-        mean,median, std, stat= self.describe_data(col=col)
-        q5, q95= stat.quantile(0.05), self.frame[col].quantile(0.95)
+    def outlier_plot(self, frame: pl.DataFrame, col: str, n_out: int) -> go.Figure: 
+        logger.info(f'Scatter plot for column "{col}" was created')
+        return px.scatter(
+            frame, 
+            y=[0]*n_out, 
+            title=f'Outliers_in_{col}'
+        )
+    
+    def correlation_plot(self, frame: pl.DataFrame) -> go.Figure: 
+        logger.info('The image of the correlation columns was created')
+        return px.imshow(
+            frame, 
+            text_auto=True, 
+            color_continuous_scale=self.color_palet, 
+            template=self.template, 
+            title='Correlation Matrix'
+        )
+
+class SaveInsights: 
+    @staticmethod
+    def insights_num_data(col: str, mean: Union[int, float], median: Union[int, float], std: Union[int, float], skew: str) -> str: 
+        logger.info(f'The insight for the numeric column "{col}" in distribution analysis was created')
+        return f'- {col}: media={mean:.0f}, median={median:.2f}, std={std:.2f} -> sesgo {skew}', skew
+    
+    @staticmethod
+    def insights_cat_data(col: str, unique: int) -> str: 
+        logger.info(f'The insight for the categoric column "{col}" in distribution analysis was created')
+        return f'{col} unique values= {unique}'
+    
+    @staticmethod
+    def insights_outlier(col: str, n_out: int, pct_out: float) -> str: 
+        logger.info(f'The insight for the column "{col}" in outlier analysis was created')
+        return f'- {col}: {n_out} outliers ({pct_out:.2f}%)'
+    
+    @staticmethod
+    def insights_correlation(columns: List[str], col_a: str, col_b: str, r_val: float) -> str: 
+        logger.info(f'The insight for the columns "{columns}" in correlation analysis was created')
+        return f"- Strongest correlation: {col_a} vs {col_b} (r={r_val:.2f})"
+    
+    @staticmethod
+    def insights_categorical(col: str, top_label: List[str], top: pl.DataFrame) -> str: 
+        logger.info(f'The insight for the column "{col}" in category analysis was created')
+        return f'- {col}: top lables= {top_label}, top=\n{top}'
+    
+    @staticmethod
+    def insights_rare_category(col: str, rare_count: int, rare_threshold: float) -> str: 
+        logger.info(f'The insight for the column "{col}" in category analysis was created')
+        return f'- {col}: {rare_count} rare categories (<{rare_threshold*100}%)'
+
+class JsonSaveInsights: 
+    @staticmethod
+    def distribution_num_data(col: str, stat: pl.DataFrame, median: float, mean: float) -> Dict[str, Any]:
+        std= float(stat.filter(pl.col('statistic')=='std')['value'].item()) 
+        q25, q75= [
+            float(stat.filter(pl.col('statistic')=='25%')['value'].item()), 
+            float(stat.filter(pl.col('statistic')=='75%')['value'].item())]
+        min_v= float(stat.filter(pl.col('statistic')=='min')['value'].item())
+        max_v= float(stat.filter(pl.col('statistic')=='max')['value'].item())
         
         num_data= {
             'type': 'numeric', 
             'mean': mean, 
             'median': median,
             'std': std,
-            'iqr_5_95': [float(q5), float(q95)], 
-            'min': float(stat.filter(pl.col('statistic')=='min')['value'].item()), 
-            'max': float(stat.filter(pl.col('statistic')=='max')['value'].item())
+            'iqr_25_75': [q25, q75], 
+            'min': min_v, 
+            'max': max_v
         }
         
         logger.info(f'The insights from the data for the numeric column {col} have been obtained correctly')
         return num_data
     
-    def save_json_file_cat_data(self, col: str) -> Dict[str, Any]: 
+    @staticmethod
+    def distribution_cat_data(col: str, n_unique: int) -> Dict[str, Any]: 
         cat_insights= {
             'type': 'categorical', 
-            'unique_count': self.frame[col].n_unique()
+            'unique_count': n_unique
         }
-        
         logger.info(f'The insights from the data for the categoric column {col} have been obtained correctly')
         return cat_insights
     
-    def insights_num_data(self, col: str) -> str: 
-        mean, median, std= self.describe_data(col=col)
+    @staticmethod
+    def outlier_data(col: str, n_out: int, pct_out: float) -> Dict[str, Any]: 
+        out_ins={
+            'total_outliers': n_out, 
+            'percent_outliers': pct_out
+        }
+        logger.info(f'The insights from the outlier data for the column {col} have been obtained correctly')
+        return out_ins
+    
+    @staticmethod
+    def corr_data(cols: List[str], col_a: str, col_b: str, r_val: float) -> Dict[str, Any]: 
+        corr_ins={
+            'columns': cols, 
+            'top_correlation_a': col_a, 
+            'top_correlation_b': col_b, 
+            'r_value': r_val
+        }
+        logger.info(f'The insights from the correlation data for the columns {cols} have been obtained correctly')
+        return corr_ins
+    
+    @staticmethod
+    def categorical_data(col: str, top_labels: List[str], top_n: int, top: pl.DataFrame, rare_count: int) -> Dict[str, Any]: 
+        cat_data={
+            'top_labs': top_labels,
+            f'top_{top_n}_cat': top, 
+            'rare_categories': rare_count
+        }
+        logger.info(f'The insights from the categorical data for the column {col} have been obtained correctly')
+        return cat_data
+
+class OperationAnalysis: 
+    def __init__(self, frame: pl.DataFrame):
+        self.frame= frame
+    
+    def describe_data(self, col: str) -> List[Union[float, pl.DataFrame, str]]: 
+        stat= self.frame[col].describe()
+        
+        mean= float(stat.filter(pl.col('statistic')=='mean')['value'].item())
+        median= float(stat.filter(pl.col('statistic')=='50%')['value'].item())
+        std= float(stat.filter(pl.col('statistic')=='std')['value'].item())
         
         skew= 'positive' if mean > median else 'negative' if mean < median else 'simetrico'
         
-        logger.info(f'The insight for the column {col} was created')
-        logger.info(f'{col}: {skew} (media={median:.2f})')
-        return f'- {col}: media={mean:.0f}, median={median:.2f}, std={std:.2f} -> sesgo {skew}'
+        logger.info(f'The describe of numeric column {col} was obtained correctly')
+        return [mean, median, std, stat, skew]
     
-    def insights_cat_data(self, col: str) -> str: 
-        unique= self.frame[col].n_unique()
-        
+    def unique_val(self, col: str) -> List[int, pl.DataFrame]: 
+        n= self.frame[col].n_unique()
+        frame= self.frame[col].value_counts().sort('count', descending=True)
         logger.info(f'The unique data value for column {col} was obtained correctly')
-        logger.info(f'{unique} values for the column {col}')
-        return f'{col} unique values= {unique}'
-    
-    def run_distribution(self, save_plot: Callable, auto_insights: bool= False) -> Union[Dict[str, Any], List[str]]: 
-        num= [col for col in self.frame.select(pl.selectors.numeric()).columns]
-        cat= [col for col in self.frame.select(pl.selectors.string()).columns]
-        
-        n_bins= self.config.plots.histogram_bins
-        save_plots= self.config.output.save_plots
-        
-        if save_plots: 
-            ruta= Path(__file__).resolve().parent.parent.parent
-            now= datetime.now().strftime('%Y-%m-%d')
-            path= ruta / f'distribution_{now}'
-            path.mkdir(parents=True, exist_ok=True) 
-        
-        save_insights= self.config.output.save_insights
-        columns= self.distribution.get('columns')
-        
-        insights= []
-        json_file= {}
-        
-        for col in columns: 
-            if col in num: 
-                if auto_insights: 
-                    self.insights_num_data(col=col)
-                else: 
-                    logger.warning(f'The insight for column {col} was not generated in the console. It was not generated because auto_insights is False')
-                
-                if save_insights: 
-                    ins= self.insights_num_data(col=col)
-                    insights.append(ins)
-                else: 
-                    logger.warning(f'The insights for column {col} were not saved because save_insights is False')
-                
-                if save_plots: 
-                    json_file[col]= self.save_json_file_num_data(col=col)
-                    fig= self.plot(col=col, n_bins=n_bins)
-                    json_file[col]['plots']= str(save_plot(fig=fig, name=f'distribution_{col}.html'))
-                else: 
-                    logger.warning(f'The plot for the column {col} was not saved because save_plots is False')
-            elif col in cat: 
-                if auto_insights: 
-                    self.insights_cat_data(col=col)
-                else: 
-                    logger.warning(f'The insight for column {col} was not generated in the console. It was not generated because auto_insights is False')
-                
-                if save_insights: 
-                    ins= self.insights_cat_data(col=col)
-                    insights.append(ins)
-                else: 
-                    logger.warning(f'The insights for column {col} were not saved because save_insights is False')
-                
-                if save_plots: 
-                    json_file[col]= self.save_json_file_cat_data(col=col)
-                else: 
-                    logger.warning(f'The plot for the column {col} was not saved because save_plots is False')
-            else: 
-                logger.warning(f'The column {col} is not a numerical or categorical column')
-                continue
-        
-        return [json_file, insights]
-
-'''save_plots= self.config.output.save_plots
-        
-        if save_plots: 
-            ruta= Path(__file__).resolve().parent.parent.parent
-            now= datetime.now().strftime('%Y-%m-%d')
-            path= ruta / f'distribution_{now}'
-            path.mkdir(parents=True, exist_ok=True) 
-        
-        save_insights= self.config.output.save_insights
-        columns= self.distribution.get('columns')'''
-
-class OutliersData: 
-    def __init__(self, frame: pl.DataFrame, outliers: Dict[str, Any], config: Dict[str, Any]):
-        self.frame= frame
-        self.outliers= outliers
-        self.config= config
-    
-    def plot(self, col: str, outlier_frame: pl.DataFrame, n_out: int): 
-        return px.scatter(
-            x=outlier_frame[col].to_list(), 
-            y=[0] * n_out, 
-            title=f'Outliers_in_{col}'
-        )
+        return [n, frame]
     
     def iqr_method(self, col: str) -> List[Union[pl.DataFrame, int, float]]: 
         q1= self.frame[col].quantile(0.25)
@@ -174,84 +210,7 @@ class OutliersData:
         logger.info(f'The frame with outliers (if applicable), the number of filtered outliers, and the percentage of total outliers for column {col} were obtained correctly')
         return [outliers, n_out, pct_out]
     
-    def insights(col: str, n_out: int, pct_out: float) -> str: 
-        logger.info(f'{col}: {pct_out:.2f}% outliers')
-        return f'- {col}: {n_out} outliers ({pct_out:.2f}%)'
-    
-    def run_outlier(self, save_plot: Callable, auto_insights: bool= False) -> Union[Dict[str, Any], List[str]]: 
-        columns= self.outliers.get('columns')
-        method= self.outliers.get('method')
-        
-        insight= []
-        dict_data= {}
-        
-        save_plots= self.config.output.save_plots
-        save_insights= self.config.output.save_insights
-        
-        if save_plots: 
-            ruta= Path(__file__).resolve().parent.parent.parent
-            now= datetime.now().strftime('%Y-%m-%d')
-            path= ruta / f'outliers_{now}'
-            path.mkdir(parents=True, exist_ok=True) 
-        
-        for col in columns: 
-            if method == 'iqr':
-                frame_out, n_out, pct_out= self.iqr_method(col=col)
-            else: 
-                logger.warning('There are no more methods available for outliers')
-                continue #no more strategies available
-            
-            if n_out > 0: 
-                if auto_insights: 
-                    self.insights(col=col, n_out=n_out, pct_out= pct_out)
-                else: 
-                    logger.warning(f'The insight for column {col} was not generated in the console. It was not generated because auto_insights is False')
-                
-                if save_insights: 
-                    ins= self.insights(col=col, n_out=n_out, pct_out= pct_out)
-                    insight.append(ins)
-                else: 
-                    logger.warning(f'The insights for column {col} were not saved because save_insights is False')
-                
-                if save_plots: 
-                    dict_data[col]={
-                        'total_outliers': n_out, 
-                        'percent_outliers': pct_out, 
-                        'frame_sample': frame_out.limit(10)
-                    }
-                    fig= self.plot(col=col, outlier_frame=frame_out, n_out=n_out)
-                    dict_data[col]['plots']= str(save_plot(fig=fig, name=f'outlier_{col}.html'))
-                else: 
-                    logger.warning(f'The plot for the column {col} was not saved because save_plots is False')
-            else: 
-                logger.info(f'{col}: without outliers')
-                continue
-        
-        return [dict_data, insight]
-
-class CorrelationData: 
-    def __init__(self, frame: pl.DataFrame, correlation: Dict[str, Any], configs: Dict[str, Any]):
-        self.frame= frame
-        self.correlation= correlation
-        self.configs= configs
-    
-    def plot(self, corr: pl.DataFrame): 
-        return px.imshow(
-            corr, 
-            text_auto=True, 
-            color_continuous_scale=self.configs.plots.color_palette, 
-            template=self.configs.plots.plotly_template, 
-            title='Correlation Matrix'
-        )
-    
-    def save_plot(self, fig, name: str) -> None: 
-        folder= self.analysis_config.output.report_folder_name
-        path= folder / name
-        fig.write_html(path, include_plotlyjs="cdn")
-        return path
-    
-    def corr_op(self) -> List[Union[str, int, float, pl.DataFrame]]: 
-        columns= self.correlation.get('columns')
+    def corr_op(self, columns: List[str]) -> List[Union[str, int, float, pl.DataFrame]]: 
         corr= self.frame.select(columns).corr()
         
         corr_ins= corr.with_columns(column=pl.Series(corr.columns))
@@ -269,142 +228,252 @@ class CorrelationData:
         col_b= top_corr['variable'][0]
         r_val= top_corr['value'][0]
         
-        return [columns, col_a, col_b, r_val, corr]
+        logger.info(f'Correlation operation for columns {columns} were obtained correctly. "col_a", "col_b" and "r_val" were obtained.')
+        return [col_a, col_b, r_val, corr]
     
-    def run_corr(self, save_plot: Callable, auto_insights: bool= False) -> Union[Dict[str, Any], List[str]]:
-        cols, col_a, col_b, r_val, corr= self.corr_op()
+    def category_op(self, col: str, top_n: int, rare_threshold: float) -> List[Any]: 
+        top_count= self.frame[col].value_count()
+        total= self.frame.height
         
-        insights= []
-        json_file= {}
+        top= top_count.sort('counts', descending=True).limit(top_n)
+        rare_count= top_count.filter(pl.col('counts') < total*rare_threshold).height
+        top_labels= [row[0] for row in top.rows()]
         
-        save_plots= self.configs.output.save_plots
-        save_insights= self.configs.output.save_insights
+        logger.info(f'Categories dominance and rare categories for column {col} were obtained correctly')
+        return [top, rare_count, top_labels]
+
+class AnalysisData: 
+    def __init__(self, frame: pl.DataFrame, config: Dict[str, Any]):
+        self.frame= frame
         
-        if save_plots: 
-            ruta= Path(__file__).resolve().parent.parent.parent
-            now= datetime.now().strftime('%Y-%m-%d')
-            path= ruta / f'correlation_{now}'
-            path.mkdir(parents=True, exist_ok=True) 
+        self.analysis_config= config.analysis_config
+        self.data_analysis= config.data_analysis
+        
+        self.folder= FoldersAndFiles(config=self.analysis_config.output)
+        self.plots= Plots(config=self.analysis_config.plots)
+        self.operation= OperationAnalysis(frame=self.frame)
+        #Analysis
+        self.in_list= []
+        self.in_dict= {}
+    
+    def save(self, 
+            col: Union[str, List[str]], 
+            analysis: str, 
+            insight: Union[List[str], str], 
+            insight_save: Union[List[str], str], 
+            plot: Optional[go.Figure], 
+            json: Dict[str, Any]): 
+        save_plots= self.analysis_config.save_plots
+        save_insights= self.analysis_config.save_insights
+        auto_insights= self.data_analysis.auto_insights
+        
+        num=0
         
         if auto_insights: 
-            logger.info(f'Top correlation A: {col_a}, top correlation B: {r_val}, r_value: {r_val}')
+            pass
         else: 
-            logger.warning(f'The insight for columns {cols} was not generated in the console. It was not generated because auto_insights is False')
+            logger.warning(f'The insight were not generated in the console. It was not generated because auto_insights is False')
+            num+=1
+        #AUTO-INSIGHTS
         
-        if save_insights: 
-            logger.info(f'Top correlation A: {col_a}, top correlation B: {r_val}, r_value: {r_val}')
-            insights.append(f"- Strongest correlation: {col_a} vs {col_b} (r={r_val:.2f})")
+        if save_insights:
+            pass
         else: 
-            logger.warning(f'The insights for columns {cols} were not saved because save_insights is False')
+            logger.warning(f'The insights were not saved because save_insights is False')
+            num+=1
+        #SAVE-INSIGHTS
         
-        if save_plots: 
-            json_file['num_columns']= {
-                'columns': cols, 
-                'top_correlation_a': col_a, 
-                'top_correlation_b': col_b, 
-                'r_value': r_val
-            }
-            fig= self.plot(corr=corr)
-            json_file['num_columns']['plots']= str(save_plot(fig=fig, name=f'correlation.html'))
+        if save_plots:
+            pass
         else: 
-            logger.warning(f'The plot for the columns {cols} was not saved because save_plots is False')
+            logger.warning(f'The plot was not saved because save_plots is False')
+            num+=1
+        #SAVE PLOTS
         
-        return [json_file, insights]
-
-class CategoryDominance: 
-    def __init__(self, frame: pl.DataFrame, category: Dict[str, Any], config: Dict[str, Any]):
-        self.frame= frame
-        self.category= category.get('category_dominance')
-        self.config= config
+        if num==3: 
+            logger.warning(f'No {analysis} analysis is available for the data')
+            return True
     
-    def plot(self, top: pl.DataFrame, col: str, n_bins: int): 
-        return px.histogram(
-            top, 
-            x=col, 
-            nbins=n_bins, 
-            title=f'Distribution: {col}'
-        )
+    def distribution(self, distribution_dic: Dict[str, Any]): 
+        enable= distribution_dic.get('enable')
+        columns= distribution_dic.get('columns')
+        
+        num= [col for col in self.frame.select(pl.selectors.numeric()).columns]
+        cat= [col for col in self.frame.select(pl.selectors.string()).columns]
+        
+        if not enable: 
+            logger.info('Distribution analysis is not enable')
+            return 
+        
+        for col in columns:
+            if col in num: 
+                mean, median, std, stat_frame, skew= self.operation.describe_data(col=col)
+                insight= logger.info(f'{col}: {skew} (media={median:.2f})')
+                insights_save= SaveInsights.insights_num_data(
+                    col=col, 
+                    mean=mean, 
+                    median=median, 
+                    std=std, 
+                    skew=skew
+                )
+                plots= self.plots.distribution_plot(frame=self.frame, col=col)
+                json_save= JsonSaveInsights.distribution_num_data(
+                    col=col, 
+                    stat=stat_frame, 
+                    median=median, 
+                    mean=mean
+                )
+                r= self.save(
+                    col=col, 
+                    analysis='distribution', 
+                    insight=insight, 
+                    insight_save=insights_save,
+                    plot=plots, 
+                    json=json_save
+                )
+                if r: 
+                    break
+            elif col in cat: 
+                unique, frame= self.operation.unique_val(col=col)
+                insight= logger.info(f'{unique} values for the column {col}')
+                insights_save= SaveInsights.insights_cat_data(col=col, unique=unique)
+                plots= self.plots.bar(
+                    frame=frame, 
+                    col=col
+                )
+                json_save= JsonSaveInsights.distribution_cat_data(col=col, n_unique=unique)
+                r= self.save(
+                    col=col, 
+                    analysis='distribution', 
+                    insight=insight, 
+                    insight_save=insights_save, 
+                    plot=plots, 
+                    json=json_save
+                )
+                if r: 
+                    break
+            else: 
+                logger.warning(f'Column "{col}" is not a numeric or categoric column')
     
-    def save_plot(self, fig, name: str) -> None: 
-        folder= self.analysis_config.output.report_folder_name
-        path= folder / name
-        fig.write_html(path, include_plotlyjs="cdn")
-        return path
-    
-    def categorical(self, save_plot: Callable, auto_insights: bool= False) -> Union[Dict[str, Any], List[str]]: 
-        columns= self.category.get('columns')
-        top_n= self.category.get('top_n')
-        rare_threshold= self.category.get('rare_threshold')
+    def outliers(self, outliers_dic: Dict[str, Any]): 
+        enable= outliers_dic.get('enable')
+        method= outliers_dic.get('method')
+        columns= outliers_dic.get('columns')
         
-        insights= []
-        json_field= {}
-        
-        n_bins= self.config.plots.histogram_bins
-        save_plots= self.config.output.save_plots
-        save_insights= self.config.output.save_insights
-        
-        if save_plots: 
-            ruta= Path(__file__).resolve().parent.parent.parent
-            now= datetime.now().strftime('%Y-%m-%d')
-            path= ruta / f'categories_{now}'
-            path.mkdir(parents=True, exist_ok=True) 
+        if not enable: 
+            logger.info('Outliers analysis is not enable')
+            return 
         
         for col in columns: 
-            top= self.frame[col].value_count().sort('counts', descending=True).limit(top_n)
-            top_labels= [row[0] for row in top.rows()]
-            
-            if auto_insights: 
-                logger.info(f'{col}: top=\n{top}')
+            if method == 'iqr': 
+                frame, n_out, pct_out= self.operation.iqr_method(col=col)
+                insight= logger.info(f'{col}: {pct_out:.2f}% outliers')
+                insights_save= SaveInsights.insights_outlier(col=col, n_out=n_out, pct_out=pct_out)
+                plots= self.plots.outlier_plot(frame=frame, col=col, n_out=n_out)
+                json_save= JsonSaveInsights.outlier_data(col=col, n_out=n_out, pct_out=pct_out)
+                r= self.save(
+                    col=col, 
+                    analysis='outliers', 
+                    insight=insight, 
+                    insight_save=insights_save, 
+                    plot=plots, 
+                    json=json_save
+                )
+                if r: 
+                    break
             else: 
-                logger.warning(f'The insight for column {col} was not generated in the console. It was not generated because auto_insights is False')
-            
-            if save_insights:
-                logger.info(f'{col}: top=\n{top}') 
-                ins= f'- {col}: top= {top}'
-                insights.append(ins)
-            else: 
-                logger.warning(f'The insights for column {col} were not saved because save_insights is False')
-            
-            if save_plots: 
-                json_field[col]={
-                    'top_labs': top_labels,
-                    f'top_{top_n}_cat': top
-                }
-                fig= self.plot(top=top, col=col, n_bins=n_bins)
-                json_field[col]['plots']= str(save_plot(fig=fig, name=f'category_{col}.html'))
-            else: 
-                logger.warning(f'The plot for the column {col} was not saved because save_plots is False')
-            
-            #Rare categories
-            total= self.frame.height
-            rare_count= self.frame[col].value_count().filter(pl.col('counts') < total*rare_threshold).height
-            if rare_count > 0: 
-                
-                if auto_insights: 
-                    logger.info(f'{col}: {rare_count} rare categories (<{rare_threshold*100}%)')
-                else: 
-                    logger.warning(f'The insight for column {col} was not generated in the console. It was not generated because auto_insights is False')
-                
-                if save_insights:
-                    ins= f'- {col}: {rare_count} rare categories (<{rare_threshold*100}%)'
-                    insights.append(ins)
-                else: 
-                    logger.warning(f'The insights for column {col} were not saved because save_insights is False')
-                
-                if save_plots: 
-                    json_field[col]={
-                        'rare_category': rare_count
-                    }
-                else: 
-                    logger.warning(f'The plot for the column {col} was not saved because save_plots is False')
-            return [json_field, insights]
+                logger.error(f'No method {method} available')
+                raise
+    
+    def correlation(self, correlation_dic: Dict[str, Any]):
+        enable= correlation_dic.get('enable')
+        columns= correlation_dic.get('columns')
+        
+        if not enable: 
+            logger.info('Correlation analysis is not enable')
+            return None
+        
+        col_a, col_b, r_val, frame_corr= self.operation.corr_op(columns=columns)
+        
+        insight= logger.info(f'Top correlation A: {col_a}, top correlation B: {r_val}, r_value: {r_val}')
+        insights_save= SaveInsights.insights_correlation(
+            columns=columns, 
+            col_a=col_a, 
+            col_b=col_b, 
+            r_val=r_val
+        )
+        plots= self.plots.correlation_plot(frame=frame_corr)
+        json_save= JsonSaveInsights.corr_data(
+            cols=columns, 
+            col_a=col_a, 
+            col_b=col_b, 
+            r_val=r_val
+        )
+        self.save(
+            col=columns, 
+            analysis='correlation', 
+            insight=insight, 
+            insight_save=insights_save, 
+            plot=plots, 
+            json=json_save
+        )
+    
+    def category_dominance(self, category_dom_dict: Dict[str, Any]): 
+        enable= category_dom_dict.get('enable')
+        top_n= category_dom_dict.get('top_n')
+        rare_threshold= category_dom_dict.get('rare_threshold')
+        columns= category_dom_dict.get('columns')
+        
+        if not enable: 
+            logger.info('Categories analysis is not enable')
+            return None
+        
+        for col in columns: 
+            frame_top, rare_n, top_labels= self.operation.category_op(
+                col=col, 
+                top_n=top_n, 
+                rare_threshold=rare_threshold 
+            )
+            insight= [
+                logger.info(f'{col}: top=\n{frame_top}'), 
+                logger.info(f'{col}: {rare_n} total rare categories')
+            ]
+            insights_save= [
+                SaveInsights.insights_categorical(
+                    col=col, 
+                    top_label=top_labels, 
+                    top=frame_top
+                ), 
+                SaveInsights.insights_rare_category(
+                    col=col, 
+                    rare_count=rare_n,
+                    rare_threshold=rare_threshold
+                )
+            ]
+            json_save= JsonSaveInsights.categorical_data(
+                col=col, 
+                top_labels=top_labels, 
+                top=frame_top, 
+                rare_count=rare_n
+            )
+            r= self.save(
+                col=col, 
+                analysis='CategoryDominance', 
+                insight=insight, 
+                insight_save=insights_save, 
+                plot=None, 
+                json=json_save
+            )
+            if r:
+                break
+    
+    def run_analysis(): 
+        pass
+    
+    
+    
+    
+    
+    
+    
 
-
-class AnalsisData: 
-    def __init__(self, frame: pl.DataFrame, data_analysis: Dict[str, Any], analysis_config: Dict[str, Any]):
-        self.frame= frame
-        self.analysis_config= analysis_config
-        self.data_analysis= data_analysis
-
-
-print(path.exists())
