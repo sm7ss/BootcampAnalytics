@@ -118,7 +118,6 @@ cython_debug/
 # Data files (add specific extensions you don't want to upload)
 *.xlsx
 *.xls
-*.json
 *.parquet
 *.db
 *.sqlite

@@ -1,0 +1,56 @@
+{
+    "distribution": {
+        "days_listed": {
+            "type": "numeric",
+            "mean": 39.55475982532751,
+            "median": 33.0,
+            "std": 28.204269870578063,
+            "iqr_25_75": [
+                19.0,
+                53.0
+            ],
+            "min": 0.0,
+            "max": 271.0,
+            "analysis_path": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-09/distribution/distribution_days_listed.html"
+        }
+    },
+    "outliers": {
+        "days_listed": {
+            "total_outliers": 1618,
+            "percent_outliers": 3.1402231926249393,
+            "analysis_path": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-09/outliers/outliers_days_listed.html"
+        }
+    },
+    "correlation": {
+        "columns": [
+            "price",
+            "model_year",
+            "cylinders",
+            "odometer",
+            "is_4wd",
+            "days_listed"
+        ],
+        "top_correlation_a": "model_year",
+        "top_correlation_b": "price",
+        "r_value": "The columns ['price', 'model_year', 'cylinders', 'odometer', 'is_4wd', 'days_listed'] have zero standard deviation or is zero",
+        "analysis_path": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-09/correlation/correlation_matrix.html"
+    },
+    "CategoryDominance": {
+        "date_posted": {
+            "top_labs": [
+                "2019-03-17",
+                "2019-01-05",
+                "2018-09-20",
+                "2019-03-11",
+                "2018-10-09",
+                "2019-04-10",
+                "2018-08-05",
+                "2019-03-28",
+                "2018-05-23",
+                "2018-07-29"
+            ],
+            "rare_categories": 354,
+            "analysis_path": "No plot found"
+        }
+    }
+}
