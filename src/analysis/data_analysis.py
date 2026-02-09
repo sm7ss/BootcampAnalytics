@@ -6,8 +6,8 @@ from typing import Dict, Any, Union, List, Optional
 from pathlib import Path
 from datetime import datetime
 import json
-
 import logging
+import numpy as np
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s-%(levelname)s-%(message)s')
 logger= logging.getLogger(__name__)
@@ -17,15 +17,15 @@ class FoldersAndFiles:
         self.report_folder_name= config.report_folder_name
         self.insights_json_name= config.insights_json_name
     
-    def date_folder(self) -> Dict[str, Any]: 
+    def date_folder(self) -> Path: 
         ruta= Path(__file__).resolve().parent.parent.parent
         now= datetime.now().strftime('%Y-%m-%d')
         
         folder_analysis= f'analysis_{now}'
-        path= ruta / folder_analysis
+        path= ruta / 'analysis_report' / folder_analysis
         path.mkdir(parents=True, exist_ok=True) 
         
-        return str(path)
+        return path
     
     def analysis_folder(self,analysis: str) -> str: 
         ruta= self.date_folder()
@@ -34,6 +34,8 @@ class FoldersAndFiles:
         return nueva_ruta
     
     def save_plot(self, fig: go.Figure, analysis: str, name: str) -> str:
+        if fig is None: 
+            return 'No plot found'
         folder_name= self.analysis_folder(analysis=analysis)
         path= self.report_folder_name / folder_name / name
         fig.write_html(path, include_plotlyjs="cdn")
@@ -73,7 +75,6 @@ class Plots:
             frame, 
             x=col, 
             y='count', 
-            color_discrete_sequence=self.color_palet, 
             template=self.template, 
             title=f'Top categories in "{col}"'
         )
@@ -115,12 +116,15 @@ class SaveInsights:
     @staticmethod
     def insights_correlation(columns: List[str], col_a: str, col_b: str, r_val: float) -> str: 
         logger.info(f'The insight for the columns "{columns}" in correlation analysis was created')
-        return f"- Strongest correlation: {col_a} vs {col_b} (r={r_val:.2f})"
+        if isinstance(r_val, str):
+            return f"- Strongest correlation: {col_a} vs {col_b} (r={r_val})"
+        else:
+            return f"- Strongest correlation: {col_a} vs {col_b} (r={r_val:.2f})"
     
     @staticmethod
-    def insights_categorical(col: str, top_label: List[str], top: pl.DataFrame) -> str: 
+    def insights_categorical(col: str, top_label: List[str]) -> str: 
         logger.info(f'The insight for the column "{col}" in category analysis was created')
-        return f'- {col}: top lables= {top_label}, top=\n{top}'
+        return f'- {col}: top lables= {top_label}'
     
     @staticmethod
     def insights_rare_category(col: str, rare_count: int, rare_threshold: float) -> str: 
@@ -169,7 +173,7 @@ class JsonSaveInsights:
         return out_ins
     
     @staticmethod
-    def corr_data(cols: List[str], col_a: str, col_b: str, r_val: float) -> Dict[str, Any]: 
+    def corr_data(cols: List[str], col_a: str, col_b: str, r_val: Union[str, float]) -> Dict[str, Any]: 
         corr_ins={
             'columns': cols, 
             'top_correlation_a': col_a, 
@@ -180,10 +184,9 @@ class JsonSaveInsights:
         return corr_ins
     
     @staticmethod
-    def categorical_data(col: str, top_labels: List[str], top_n: int, top: pl.DataFrame, rare_count: int) -> Dict[str, Any]: 
+    def categorical_data(col: str, top_labels: List[str], rare_count: int) -> Dict[str, Any]: 
         cat_data={
-            'top_labs': top_labels,
-            f'top_{top_n}_cat': top, 
+            'top_labs': top_labels, 
             'rare_categories': rare_count
         }
         logger.info(f'The insights from the categorical data for the column {col} have been obtained correctly')
@@ -242,15 +245,19 @@ class OperationAnalysis:
         col_b= top_corr['variable'][0]
         r_val= top_corr['value'][0]
         
+        if (r_val == 0) or (r_val == None) or (np.isnan(r_val)): 
+            logger.warning(f"The columns {columns} have zero standard deviation or is zero")
+            r_val= f'The columns {columns} have zero standard deviation or is zero'
+        
         logger.info(f'Correlation operation for columns {columns} were obtained correctly. "col_a", "col_b" and "r_val" were obtained.')
         return [col_a, col_b, r_val, corr]
     
     def category_op(self, col: str, top_n: int, rare_threshold: float) -> List[Any]: 
-        top_count= self.frame[col].value_count()
+        top_count= self.frame[col].value_counts()
         total= self.frame.height
         
-        top= top_count.sort('counts', descending=True).limit(top_n)
-        rare_count= top_count.filter(pl.col('counts') < total*rare_threshold).height
+        top= top_count.sort('count', descending=True).limit(top_n)
+        rare_count= top_count.filter(pl.col('count') < total*rare_threshold).height
         top_labels= [row[0] for row in top.rows()]
         
         logger.info(f'Categories dominance and rare categories for column {col} were obtained correctly')
@@ -278,8 +285,8 @@ class AnalysisData:
             insight_save: Union[List[str], str], 
             plot: Optional[go.Figure], 
             json: Dict[str, Any]) -> Optional[bool]: 
-        save_plots= self.analysis_config.save_plots
-        save_insights= self.analysis_config.save_insights
+        save_plots= self.analysis_config.output.save_plots
+        save_insights= self.analysis_config.output.save_insights
         auto_insights= self.data_analysis.auto_insights
         
         num=0
@@ -297,11 +304,15 @@ class AnalysisData:
             num+=1
         
         if save_plots:
-            plo= plot
-            str_path= self.folder.save_plot(fig=plo, analysis=analysis, name=f'{analysis}_{col}.html')
             self.in_dict[analysis]= {}
-            self.in_dict[analysis][col]= json
-            self.in_dict[analysis][col]['analysis_path']= str(str_path)
+            if isinstance(col, str): 
+                str_path= self.folder.save_plot(fig=plot, analysis=analysis, name=f'{analysis}_{col}.html')
+                self.in_dict[analysis][col]= json
+                self.in_dict[analysis][col]['analysis_path']= str(str_path)
+            else: 
+                str_path= self.folder.save_plot(fig=plot, analysis=analysis, name=f'correlation_matrix.html')
+                self.in_dict[analysis]= json
+                self.in_dict[analysis]['analysis_path']= str(str_path)
         else: 
             logger.warning(f'The plot was not saved because save_plots is False')
             num+=1
@@ -457,8 +468,7 @@ class AnalysisData:
             insights_save= [
                 SaveInsights.insights_categorical(
                     col=col, 
-                    top_label=top_labels, 
-                    top=frame_top
+                    top_label=top_labels
                 ), 
                 SaveInsights.insights_rare_category(
                     col=col, 
@@ -469,7 +479,6 @@ class AnalysisData:
             json_save= JsonSaveInsights.categorical_data(
                 col=col, 
                 top_labels=top_labels, 
-                top=frame_top, 
                 rare_count=rare_n
             )
             r= self.dict_list_fill(
