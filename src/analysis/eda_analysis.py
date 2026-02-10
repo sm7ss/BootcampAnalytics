@@ -1,6 +1,6 @@
 import polars as pl 
 
-class eda: 
+class EDA: 
     def __init__(self, frame: pl.DataFrame, null_threshold: float):
         self.frame= frame
         self.null_threshold= null_threshold
