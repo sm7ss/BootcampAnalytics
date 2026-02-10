@@ -41,7 +41,7 @@ class FoldersAndFiles:
         fig.write_html(path, include_plotlyjs="cdn")
         return path
     
-    def json_save(self, dict_ins: Dict[str, Any], encoding: str='utf-8') -> None: 
+    def json_save(self, dict_ins: Dict[str, Any], encoding: str='utf-8') -> Path: 
         resolve= Path(__file__).resolve().parent.parent.parent 
         path= resolve / 'analysis_report' / 'json_analysis' 
         file= path / self.insights_json_name
@@ -50,6 +50,7 @@ class FoldersAndFiles:
             with open(file, 'w', encoding=encoding) as f: 
                 json.dump(dict_ins, f, indent=4, ensure_ascii=False)
             logger.info(f'Json report was written succesfully')
+            return file
         except Exception as e: 
             logger.error(f'An error occurred while trying to write the JSON report {self.insights_json_name}. Error:\n{e}')
             raise ValueError(f'An error occurred while trying to write the JSON report {self.insights_json_name}. Error:\n{e}')
@@ -97,58 +98,25 @@ class Plots:
             title='Correlation Matrix'
         )
 
-class SaveInsights: 
-    @staticmethod
-    def insights_num_data(col: str, mean: Union[int, float], median: Union[int, float], std: Union[int, float], skew: str) -> str: 
-        logger.info(f'The insight for the numeric column "{col}" in distribution analysis was created')
-        return f'- {col}: media={mean:.0f}, median={median:.2f}, std={std:.2f} -> sesgo {skew}', skew
-    
-    @staticmethod
-    def insights_cat_data(col: str, unique: int) -> str: 
-        logger.info(f'The insight for the categoric column "{col}" in distribution analysis was created')
-        return f'{col} unique values= {unique}'
-    
-    @staticmethod
-    def insights_outlier(col: str, n_out: int, pct_out: float) -> str: 
-        logger.info(f'The insight for the column "{col}" in outlier analysis was created')
-        return f'- {col}: {n_out} outliers ({pct_out:.2f}%)'
-    
-    @staticmethod
-    def insights_correlation(columns: List[str], col_a: str, col_b: str, r_val: float) -> str: 
-        logger.info(f'The insight for the columns "{columns}" in correlation analysis was created')
-        if isinstance(r_val, str):
-            return f"- Strongest correlation: {col_a} vs {col_b} (r={r_val})"
-        else:
-            return f"- Strongest correlation: {col_a} vs {col_b} (r={r_val:.2f})"
-    
-    @staticmethod
-    def insights_categorical(col: str, top_label: List[str]) -> str: 
-        logger.info(f'The insight for the column "{col}" in category analysis was created')
-        return f'- {col}: top lables= {top_label}'
-    
-    @staticmethod
-    def insights_rare_category(col: str, rare_count: int, rare_threshold: float) -> str: 
-        logger.info(f'The insight for the column "{col}" in category analysis was created')
-        return f'- {col}: {rare_count} rare categories (<{rare_threshold*100}%)'
-
 class JsonSaveInsights: 
     @staticmethod
-    def distribution_num_data(col: str, stat: pl.DataFrame, median: float, mean: float) -> Dict[str, Any]:
+    def distribution_num_data(col: str, stat: pl.DataFrame, median: float, mean: float, skew: str) -> Dict[str, Any]:
         std= float(stat.filter(pl.col('statistic')=='std')['value'].item()) 
-        q25, q75= [
+        q= [
             float(stat.filter(pl.col('statistic')=='25%')['value'].item()), 
             float(stat.filter(pl.col('statistic')=='75%')['value'].item())]
         min_v= float(stat.filter(pl.col('statistic')=='min')['value'].item())
         max_v= float(stat.filter(pl.col('statistic')=='max')['value'].item())
         
         num_data= {
-            'type': 'numeric', 
+            'col': col, 
             'mean': mean, 
             'median': median,
             'std': std,
-            'iqr_25_75': [q25, q75], 
+            'iqr_25_75': q, 
             'min': min_v, 
-            'max': max_v
+            'max': max_v, 
+            'skew': skew
         }
         
         logger.info(f'The insights from the data for the numeric column {col} have been obtained correctly')
@@ -157,6 +125,7 @@ class JsonSaveInsights:
     @staticmethod
     def distribution_cat_data(col: str, n_unique: int) -> Dict[str, Any]: 
         cat_insights= {
+            'col': col,
             'type': 'categorical', 
             'unique_count': n_unique
         }
@@ -166,6 +135,7 @@ class JsonSaveInsights:
     @staticmethod
     def outlier_data(col: str, n_out: int, pct_out: float) -> Dict[str, Any]: 
         out_ins={
+            'col': col,
             'total_outliers': n_out, 
             'percent_outliers': pct_out
         }
@@ -184,10 +154,12 @@ class JsonSaveInsights:
         return corr_ins
     
     @staticmethod
-    def categorical_data(col: str, top_labels: List[str], rare_count: int) -> Dict[str, Any]: 
+    def categorical_data(col: str, top_labels: List[str], rare_count: int, rare_threshold: float) -> Dict[str, Any]: 
         cat_data={
+            'col': col,
             'top_labs': top_labels, 
-            'rare_categories': rare_count
+            'rare_count': rare_count, 
+            'rare_threshold': rare_threshold
         }
         logger.info(f'The insights from the categorical data for the column {col} have been obtained correctly')
         return cat_data
@@ -201,12 +173,11 @@ class OperationAnalysis:
         
         mean= float(stat.filter(pl.col('statistic')=='mean')['value'].item())
         median= float(stat.filter(pl.col('statistic')=='50%')['value'].item())
-        std= float(stat.filter(pl.col('statistic')=='std')['value'].item())
         
         skew= 'positive' if mean > median else 'negative' if mean < median else 'simetrico'
         
         logger.info(f'The describe of numeric column {col} was obtained correctly')
-        return [mean, median, std, stat, skew]
+        return [mean, median, stat, skew]
     
     def unique_val(self, col: str) -> Union[int, pl.DataFrame]: 
         n= self.frame[col].n_unique()
@@ -275,18 +246,16 @@ class AnalysisData:
         self.plots= Plots(config=self.analysis_config.plots)
         self.operation= OperationAnalysis(frame=self.frame)
         #Analysis
-        self.in_list= []
         self.in_dict= {}
     
     def dict_list_fill(self, 
             col: Union[str, List[str]], 
             analysis: str, 
             insight: Union[List[str], str], 
-            insight_save: Union[List[str], str], 
             plot: Optional[go.Figure], 
             json: Dict[str, Any]) -> Optional[bool]: 
         save_plots= self.analysis_config.output.save_plots
-        save_insights= self.analysis_config.output.save_insights
+        self.save_insights= self.analysis_config.output.save_insights
         auto_insights= self.data_analysis.auto_insights
         
         num=0
@@ -294,27 +263,31 @@ class AnalysisData:
         if auto_insights: 
             insight
         else: 
-            logger.warning(f'The insight were not generated in the console. It was not generated because auto_insights is False')
-            num+=1
-        
-        if save_insights:
-            self.in_list.append(insight_save)
-        else: 
-            logger.warning(f'The insights were not saved because save_insights is False')
+            logger.warning(f'The insight for the column {col} was not generated in the console. It was not generated because auto_insights is False')
             num+=1
         
         if save_plots:
-            self.in_dict[analysis]= {}
             if isinstance(col, str): 
                 str_path= self.folder.save_plot(fig=plot, analysis=analysis, name=f'{analysis}_{col}.html')
-                self.in_dict[analysis][col]= json
-                self.in_dict[analysis][col]['analysis_path']= str(str_path)
-            else: 
+            elif isinstance(col, list): 
                 str_path= self.folder.save_plot(fig=plot, analysis=analysis, name=f'correlation_matrix.html')
-                self.in_dict[analysis]= json
-                self.in_dict[analysis]['analysis_path']= str(str_path)
+            else: 
+                str_path= None
         else: 
-            logger.warning(f'The plot was not saved because save_plots is False')
+            logger.warning(f'The plot for the column {col} was not saved because save_plots is False')
+            num+=1
+        
+        if self.save_insights:
+            if analysis not in self.in_dict: 
+                self.in_dict[analysis]= {}
+            if isinstance(col, str): 
+                self.in_dict[analysis][col]= json
+                self.in_dict[analysis][col][f'analysis_path_{col}']= str(str_path) if str_path else None
+            elif isinstance(col, list): 
+                self.in_dict[analysis]['correlation']= json 
+                self.in_dict[analysis]['correlation']['analysis_path']= str(str_path) if str_path else None
+        else: 
+            logger.warning(f'The insights for column {col} were not saved because save_insights is False')
             num+=1
         
         if num==3: 
@@ -334,27 +307,20 @@ class AnalysisData:
         
         for col in columns:
             if col in num: 
-                mean, median, std, stat_frame, skew= self.operation.describe_data(col=col)
+                mean, median, stat_frame, skew= self.operation.describe_data(col=col)
                 insight= logger.info(f'{col}: {skew} (media={median:.2f})')
-                insights_save= SaveInsights.insights_num_data(
-                    col=col, 
-                    mean=mean, 
-                    median=median, 
-                    std=std, 
-                    skew=skew
-                )
                 plots= self.plots.distribution_plot(frame=self.frame, col=col)
                 json_save= JsonSaveInsights.distribution_num_data(
                     col=col, 
                     stat=stat_frame, 
                     median=median, 
-                    mean=mean
+                    mean=mean, 
+                    skew=skew
                 )
                 r= self.dict_list_fill(
                     col=col, 
                     analysis='distribution', 
                     insight=insight, 
-                    insight_save=insights_save,
                     plot=plots, 
                     json=json_save
                 )
@@ -363,7 +329,6 @@ class AnalysisData:
             elif col in cat: 
                 unique, frame= self.operation.unique_val(col=col)
                 insight= logger.info(f'{unique} values for the column {col}')
-                insights_save= SaveInsights.insights_cat_data(col=col, unique=unique)
                 plots= self.plots.bar(
                     frame=frame, 
                     col=col
@@ -373,7 +338,6 @@ class AnalysisData:
                     col=col, 
                     analysis='distribution', 
                     insight=insight, 
-                    insight_save=insights_save, 
                     plot=plots, 
                     json=json_save
                 )
@@ -395,14 +359,12 @@ class AnalysisData:
             if method == 'iqr': 
                 frame, n_out, pct_out= self.operation.iqr_method(col=col)
                 insight= logger.info(f'{col}: {pct_out:.2f}% outliers')
-                insights_save= SaveInsights.insights_outlier(col=col, n_out=n_out, pct_out=pct_out)
                 plots= self.plots.outlier_plot(frame=frame, col=col, n_out=n_out)
                 json_save= JsonSaveInsights.outlier_data(col=col, n_out=n_out, pct_out=pct_out)
                 r= self.dict_list_fill(
                     col=col, 
                     analysis='outliers', 
                     insight=insight, 
-                    insight_save=insights_save, 
                     plot=plots, 
                     json=json_save
                 )
@@ -423,12 +385,6 @@ class AnalysisData:
         col_a, col_b, r_val, frame_corr= self.operation.corr_op(columns=columns)
         
         insight= logger.info(f'Top correlation A: {col_a}, top correlation B: {r_val}, r_value: {r_val}')
-        insights_save= SaveInsights.insights_correlation(
-            columns=columns, 
-            col_a=col_a, 
-            col_b=col_b, 
-            r_val=r_val
-        )
         plots= self.plots.correlation_plot(frame=frame_corr)
         json_save= JsonSaveInsights.corr_data(
             cols=columns, 
@@ -440,7 +396,6 @@ class AnalysisData:
             col=columns, 
             analysis='correlation', 
             insight=insight, 
-            insight_save=insights_save, 
             plot=plots, 
             json=json_save
         )
@@ -465,34 +420,23 @@ class AnalysisData:
                 logger.info(f'{col}: top=\n{frame_top}'), 
                 logger.info(f'{col}: {rare_n} total rare categories')
             ]
-            insights_save= [
-                SaveInsights.insights_categorical(
-                    col=col, 
-                    top_label=top_labels
-                ), 
-                SaveInsights.insights_rare_category(
-                    col=col, 
-                    rare_count=rare_n,
-                    rare_threshold=rare_threshold
-                )
-            ]
             json_save= JsonSaveInsights.categorical_data(
                 col=col, 
                 top_labels=top_labels, 
-                rare_count=rare_n
+                rare_count=rare_n, 
+                rare_threshold=rare_threshold
             )
             r= self.dict_list_fill(
                 col=col, 
                 analysis='CategoryDominance', 
                 insight=insight, 
-                insight_save=insights_save, 
                 plot=None, 
                 json=json_save
             )
             if r:
                 break
     
-    def run_analysis(self) -> List[str]: 
+    def run_analysis(self) -> Optional[Path]: 
         ins_q= self.data_analysis.insight_questions
         
         for i in range(len(ins_q)): 
@@ -509,7 +453,6 @@ class AnalysisData:
                 logger.error(f'{ins} analysis doesnt exist')
                 raise ValueError(f'{ins} analysis doesnt exist')
         
-        self.folder.json_save(dict_ins=self.in_dict, encoding=self.encoding)
-        
-        return self.in_list
+        if self.save_insights:
+            return self.folder.json_save(dict_ins=self.in_dict, encoding=self.encoding)
 
