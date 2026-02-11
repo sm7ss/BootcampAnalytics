@@ -1,0 +1,296 @@
+{
+    "distribution": {
+        "price": {
+            "col": "price",
+            "mean": 12132.464919941776,
+            "median": 9000.0,
+            "std": 10040.803015443296,
+            "iqr_25_75": [
+                5000.0,
+                16839.0
+            ],
+            "min": 1.0,
+            "max": 375000.0,
+            "skew": "positive",
+            "analysis_path_price": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_price.html"
+        },
+        "model_year": {
+            "col": "model_year",
+            "mean": 2009.75046966977,
+            "median": 2011.0,
+            "std": 6.2820647921742045,
+            "iqr_25_75": [
+                2006.0,
+                2014.0
+            ],
+            "min": 1908.0,
+            "max": 2019.0,
+            "skew": "negative",
+            "analysis_path_model_year": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_model_year.html"
+        },
+        "model": {
+            "col": "model",
+            "type": "categorical",
+            "unique_count": 100,
+            "analysis_path_model": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_model.html"
+        },
+        "condition": {
+            "col": "condition",
+            "type": "categorical",
+            "unique_count": 6,
+            "analysis_path_condition": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_condition.html"
+        },
+        "cylinders": {
+            "col": "cylinders",
+            "mean": 6.125235058899817,
+            "median": 6.0,
+            "std": 1.6603600581926181,
+            "iqr_25_75": [
+                4.0,
+                8.0
+            ],
+            "min": 3.0,
+            "max": 12.0,
+            "skew": "positive",
+            "analysis_path_cylinders": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_cylinders.html"
+        },
+        "fuel": {
+            "col": "fuel",
+            "type": "categorical",
+            "unique_count": 5,
+            "analysis_path_fuel": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_fuel.html"
+        },
+        "odometer": {
+            "col": "odometer",
+            "mean": 115553.4617376756,
+            "median": 113000.0,
+            "std": 65094.611340709744,
+            "iqr_25_75": [
+                70000.0,
+                155000.0
+            ],
+            "min": 0.0,
+            "max": 990000.0,
+            "skew": "positive",
+            "analysis_path_odometer": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_odometer.html"
+        },
+        "transmission": {
+            "col": "transmission",
+            "type": "categorical",
+            "unique_count": 3,
+            "analysis_path_transmission": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_transmission.html"
+        },
+        "type": {
+            "col": "type",
+            "type": "categorical",
+            "unique_count": 13,
+            "analysis_path_type": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_type.html"
+        },
+        "paint_color": {
+            "col": "paint_color",
+            "type": "categorical",
+            "unique_count": 13,
+            "analysis_path_paint_color": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_paint_color.html"
+        },
+        "is_4wd": {
+            "col": "is_4wd",
+            "mean": 1.0,
+            "median": 1.0,
+            "std": 0.0,
+            "iqr_25_75": [
+                1.0,
+                1.0
+            ],
+            "min": 1.0,
+            "max": 1.0,
+            "skew": "simetrico",
+            "analysis_path_is_4wd": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_is_4wd.html"
+        },
+        "date_posted": {
+            "col": "date_posted",
+            "type": "categorical",
+            "unique_count": 354,
+            "analysis_path_date_posted": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_date_posted.html"
+        },
+        "days_listed": {
+            "col": "days_listed",
+            "mean": 39.55475982532751,
+            "median": 33.0,
+            "std": 28.204269870578063,
+            "iqr_25_75": [
+                19.0,
+                53.0
+            ],
+            "min": 0.0,
+            "max": 271.0,
+            "skew": "positive",
+            "analysis_path_days_listed": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/distribution/distribution_days_listed.html"
+        }
+    },
+    "outliers": {
+        "price": {
+            "col": "price",
+            "total_outliers": 1646,
+            "percent_outliers": 3.194565744784086,
+            "analysis_path_price": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_price.html"
+        },
+        "model_year": {
+            "col": "model_year",
+            "total_outliers": 709,
+            "percent_outliers": 1.3760310528869482,
+            "analysis_path_model_year": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_model_year.html"
+        },
+        "cylinders": {
+            "col": "cylinders",
+            "total_outliers": 0,
+            "percent_outliers": 0.0,
+            "analysis_path_cylinders": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_cylinders.html"
+        },
+        "odometer": {
+            "col": "odometer",
+            "total_outliers": 487,
+            "percent_outliers": 0.9451722464822901,
+            "analysis_path_odometer": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_odometer.html"
+        },
+        "is_4wd": {
+            "col": "is_4wd",
+            "total_outliers": 0,
+            "percent_outliers": 0.0,
+            "analysis_path_is_4wd": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_is_4wd.html"
+        },
+        "days_listed": {
+            "col": "days_listed",
+            "total_outliers": 1618,
+            "percent_outliers": 3.1402231926249393,
+            "analysis_path_days_listed": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_days_listed.html"
+        }
+    },
+    "correlation": {
+        "correlation": {
+            "columns": [
+                "price",
+                "model_year",
+                "cylinders",
+                "odometer",
+                "is_4wd",
+                "days_listed"
+            ],
+            "top_correlation_a": "model_year",
+            "top_correlation_b": "price",
+            "r_value": "The columns ['price', 'model_year', 'cylinders', 'odometer', 'is_4wd', 'days_listed'] have zero standard deviation or is zero",
+            "analysis_path": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/correlation/correlation_matrix.html"
+        }
+    },
+    "CategoryDominance": {
+        "model": {
+            "col": "model",
+            "top_labs": [
+                "ford f-150",
+                "chevrolet silverado 1500",
+                "ram 1500",
+                "chevrolet silverado",
+                "jeep wrangler",
+                "ram 2500",
+                "toyota camry",
+                "honda accord",
+                "chevrolet silverado 2500hd",
+                "gmc sierra 1500"
+            ],
+            "rare_count": 69,
+            "rare_threshold": 0.01,
+            "analysis_path_model": "No plot found"
+        },
+        "condition": {
+            "col": "condition",
+            "top_labs": [
+                "excellent",
+                "good",
+                "like new",
+                "fair",
+                "new",
+                "salvage"
+            ],
+            "rare_count": 2,
+            "rare_threshold": 0.01,
+            "analysis_path_condition": "No plot found"
+        },
+        "fuel": {
+            "col": "fuel",
+            "top_labs": [
+                "gas",
+                "diesel",
+                "hybrid",
+                "other",
+                "electric"
+            ],
+            "rare_count": 3,
+            "rare_threshold": 0.01,
+            "analysis_path_fuel": "No plot found"
+        },
+        "transmission": {
+            "col": "transmission",
+            "top_labs": [
+                "automatic",
+                "manual",
+                "other"
+            ],
+            "rare_count": 0,
+            "rare_threshold": 0.01,
+            "analysis_path_transmission": "No plot found"
+        },
+        "type": {
+            "col": "type",
+            "top_labs": [
+                "SUV",
+                "truck",
+                "sedan",
+                "pickup",
+                "coupe",
+                "wagon",
+                "mini-van",
+                "hatchback",
+                "van",
+                "convertible"
+            ],
+            "rare_count": 4,
+            "rare_threshold": 0.01,
+            "analysis_path_type": "No plot found"
+        },
+        "paint_color": {
+            "col": "paint_color",
+            "top_labs": [
+                "white",
+                null,
+                "black",
+                "silver",
+                "grey",
+                "blue",
+                "red",
+                "green",
+                "brown",
+                "custom"
+            ],
+            "rare_count": 3,
+            "rare_threshold": 0.01,
+            "analysis_path_paint_color": "No plot found"
+        },
+        "date_posted": {
+            "col": "date_posted",
+            "top_labs": [
+                "2019-03-17",
+                "2019-01-05",
+                "2018-09-20",
+                "2019-03-11",
+                "2018-10-09",
+                "2019-04-10",
+                "2018-08-05",
+                "2019-03-28",
+                "2018-05-23",
+                "2018-07-29"
+            ],
+            "rare_count": 354,
+            "rare_threshold": 0.01,
+            "analysis_path_date_posted": "No plot found"
+        }
+    }
+}
