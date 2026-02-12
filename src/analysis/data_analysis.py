@@ -80,11 +80,11 @@ class Plots:
             title=f'Top categories in "{col}"'
         )
     
-    def outlier_plot(self, frame: pl.DataFrame, col: str, n_out: int) -> go.Figure: 
+    def outlier_plot(self, frame: pl.DataFrame, col: str) -> go.Figure: 
         logger.info(f'Scatter plot for column "{col}" was created')
-        return px.scatter(
+        return px.box(
             frame, 
-            y=[0]*n_out, 
+            x=col,
             title=f'Outliers_in_{col}'
         )
     
@@ -133,9 +133,10 @@ class JsonSaveInsights:
         return cat_insights
     
     @staticmethod
-    def outlier_data(col: str, n_out: int, pct_out: float) -> Dict[str, Any]: 
+    def outlier_data(col: str, n_out: int, pct_out: float, plot_bool: bool) -> Dict[str, Any]: 
         out_ins={
             'col': col,
+            'plot': plot_bool,
             'total_outliers': n_out, 
             'percent_outliers': pct_out
         }
@@ -143,9 +144,10 @@ class JsonSaveInsights:
         return out_ins
     
     @staticmethod
-    def corr_data(cols: List[str], col_a: str, col_b: str, r_val: Union[str, float]) -> Dict[str, Any]: 
+    def corr_data(cols: List[str], col_a: str, col_b: str, r_val: Union[str, float], plot_bool: bool) -> Dict[str, Any]: 
         corr_ins={
             'columns': cols, 
+            'plot_bool': plot_bool,
             'top_correlation_a': col_a, 
             'top_correlation_b': col_b, 
             'r_value': r_val
@@ -252,7 +254,7 @@ class AnalysisData:
             col: Union[str, List[str]], 
             analysis: str, 
             insight: Union[List[str], str], 
-            plot: Optional[go.Figure], 
+            plot: Union[go.Figure, str], 
             json: Dict[str, Any]) -> Optional[bool]: 
         save_plots= self.analysis_config.output.save_plots
         self.save_insights= self.analysis_config.output.save_insights
@@ -265,6 +267,10 @@ class AnalysisData:
         else: 
             logger.warning(f'The insight for the column {col} was not generated in the console. It was not generated because auto_insights is False')
             num+=1
+        
+        if not plot: 
+            save_plots= False
+            str_path= plot
         
         if save_plots:
             if isinstance(col, str): 
@@ -280,6 +286,7 @@ class AnalysisData:
         if self.save_insights:
             if analysis not in self.in_dict: 
                 self.in_dict[analysis]= {}
+            
             if isinstance(col, str): 
                 self.in_dict[analysis][col]= json
                 self.in_dict[analysis][col][f'analysis_path_{col}']= str(str_path) if str_path else None
@@ -359,8 +366,14 @@ class AnalysisData:
             if method == 'iqr': 
                 frame, n_out, pct_out= self.operation.iqr_method(col=col)
                 insight= logger.info(f'{col}: {pct_out:.2f}% outliers')
-                plots= self.plots.outlier_plot(frame=frame, col=col, n_out=n_out)
-                json_save= JsonSaveInsights.outlier_data(col=col, n_out=n_out, pct_out=pct_out)
+                if n_out == 0: 
+                    plots= False
+                    plot_bool= False
+                    logger.warning(f'The number of outliers is {n_out}, so it is not necessary to make a boxplot for column {col}')
+                else: 
+                    plots= self.plots.outlier_plot(frame=frame, col=col)
+                    plot_bool= True
+                json_save= JsonSaveInsights.outlier_data(col=col, n_out=n_out, pct_out=pct_out, plot_bool=plot_bool)
                 r= self.dict_list_fill(
                     col=col, 
                     analysis='outliers', 
@@ -385,12 +398,19 @@ class AnalysisData:
         col_a, col_b, r_val, frame_corr= self.operation.corr_op(columns=columns)
         
         insight= logger.info(f'Top correlation A: {col_a}, top correlation B: {r_val}, r_value: {r_val}')
-        plots= self.plots.correlation_plot(frame=frame_corr)
+        if isinstance(r_val, str):
+            plots= False
+            plot_bool= False
+            logger.warning(f'The correlation value is invalid. Correlation detected: {r_val}')
+        else: 
+            plots= self.plots.correlation_plot(frame=frame_corr)
+            plot_bool= True
         json_save= JsonSaveInsights.corr_data(
             cols=columns, 
             col_a=col_a, 
             col_b=col_b, 
-            r_val=r_val
+            r_val=r_val, 
+            plot_bool=plot_bool
         )
         self.dict_list_fill(
             col=columns, 
