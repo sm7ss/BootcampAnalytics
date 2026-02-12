@@ -130,36 +130,42 @@
     "outliers": {
         "price": {
             "col": "price",
+            "plot": true,
             "total_outliers": 1646,
             "percent_outliers": 3.194565744784086,
             "analysis_path_price": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_price.html"
         },
         "model_year": {
             "col": "model_year",
+            "plot": true,
             "total_outliers": 709,
             "percent_outliers": 1.3760310528869482,
             "analysis_path_model_year": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_model_year.html"
         },
         "cylinders": {
             "col": "cylinders",
+            "plot": false,
             "total_outliers": 0,
             "percent_outliers": 0.0,
-            "analysis_path_cylinders": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_cylinders.html"
+            "analysis_path_cylinders": null
         },
         "odometer": {
             "col": "odometer",
+            "plot": true,
             "total_outliers": 487,
             "percent_outliers": 0.9451722464822901,
             "analysis_path_odometer": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_odometer.html"
         },
         "is_4wd": {
             "col": "is_4wd",
+            "plot": false,
             "total_outliers": 0,
             "percent_outliers": 0.0,
-            "analysis_path_is_4wd": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_is_4wd.html"
+            "analysis_path_is_4wd": null
         },
         "days_listed": {
             "col": "days_listed",
+            "plot": true,
             "total_outliers": 1618,
             "percent_outliers": 3.1402231926249393,
             "analysis_path_days_listed": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/outliers/outliers_days_listed.html"
@@ -175,10 +181,11 @@
                 "is_4wd",
                 "days_listed"
             ],
+            "plot_bool": false,
             "top_correlation_a": "model_year",
             "top_correlation_b": "price",
             "r_value": "The columns ['price', 'model_year', 'cylinders', 'odometer', 'is_4wd', 'days_listed'] have zero standard deviation or is zero",
-            "analysis_path": "/home/arbolitos7/Documents/TripleTen/Sprint7/Sprint7/analysis_report/analysis_2026-02-11/correlation/correlation_matrix.html"
+            "analysis_path": null
         }
     },
     "CategoryDominance": {
@@ -198,7 +205,7 @@
             ],
             "rare_count": 69,
             "rare_threshold": 0.01,
-            "analysis_path_model": "No plot found"
+            "analysis_path_model": null
         },
         "condition": {
             "col": "condition",
@@ -212,7 +219,7 @@
             ],
             "rare_count": 2,
             "rare_threshold": 0.01,
-            "analysis_path_condition": "No plot found"
+            "analysis_path_condition": null
         },
         "fuel": {
             "col": "fuel",
@@ -225,7 +232,7 @@
             ],
             "rare_count": 3,
             "rare_threshold": 0.01,
-            "analysis_path_fuel": "No plot found"
+            "analysis_path_fuel": null
         },
         "transmission": {
             "col": "transmission",
@@ -236,7 +243,7 @@
             ],
             "rare_count": 0,
             "rare_threshold": 0.01,
-            "analysis_path_transmission": "No plot found"
+            "analysis_path_transmission": null
         },
         "type": {
             "col": "type",
@@ -254,7 +261,7 @@
             ],
             "rare_count": 4,
             "rare_threshold": 0.01,
-            "analysis_path_type": "No plot found"
+            "analysis_path_type": null
         },
         "paint_color": {
             "col": "paint_color",
@@ -272,7 +279,7 @@
             ],
             "rare_count": 3,
             "rare_threshold": 0.01,
-            "analysis_path_paint_color": "No plot found"
+            "analysis_path_paint_color": null
         },
         "date_posted": {
             "col": "date_posted",
@@ -282,15 +289,15 @@
                 "2018-09-20",
                 "2019-03-11",
                 "2018-10-09",
-                "2019-04-10",
                 "2018-08-05",
+                "2019-04-10",
                 "2019-03-28",
                 "2018-05-23",
                 "2018-07-29"
             ],
             "rare_count": 354,
             "rare_threshold": 0.01,
-            "analysis_path_date_posted": "No plot found"
+            "analysis_path_date_posted": null
         }
     }
 }
