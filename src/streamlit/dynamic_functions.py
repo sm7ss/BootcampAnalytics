@@ -1,20 +1,43 @@
-from ..strategies.app_strategies import operations_strategies, visualization_strategies
+from ..strategies.app_strategies import operations_strategies_cat, operations_strategies_num, visualization_strategies_num, visualization_strategies_cat
 import polars as pl
 from typing import List
 
-class columns: 
-    def available_columns(frame: pl.DataFrame) -> List[str]: 
-        return frame.columns
+class FrameOperations: 
+    def __init__(self, frame: pl.DataFrame):
+        self.frame= frame
     
-    def filters(frame: pl.DataFrame) : 
-        pass
+    def available_columns(self) -> List[str]: 
+        return self.frame.columns
     
-    def operations() -> List[str]: 
-        return [v.value.capitalize() for v in operations_strategies]
+    def numeric_columns(self) -> List[str]: 
+        return self.frame.select(pl.selectors.numeric())
     
-    def visualization() -> List[str]: 
-        return [v.value for v in visualization_strategies]
+    def categoric_columns(self) -> List[str]: 
+        return self.frame.select(pl.selectors.string())
+    
+    def filters(self) : 
+        av_colums= self.available_columns()
+        
+        
+        
+        
 
+class Streategies:
+    @staticmethod
+    def operations_num() -> List[str]: 
+        return [v.value.capitalize() for v in operations_strategies_num]
+    
+    @staticmethod
+    def operations_cat() -> List[str]: 
+        return [v.value for v in operations_strategies_cat]
+    
+    @staticmethod
+    def visualization_num() -> List[str]: 
+        return [v.value for v in visualization_strategies_num]
+    
+    @staticmethod
+    def visualization_cat() -> List[str]: 
+        return [v.value for v in visualization_strategies_cat]
 
 
 
