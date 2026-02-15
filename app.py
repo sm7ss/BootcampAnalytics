@@ -1,10 +1,11 @@
 import streamlit as st
-from src.streamlit.dynamic_functions import columns
+from src.streamlit.dynamic_functions import FrameOperations, Streategies
 from main import data
 
 frame, file= data()
 data_name= f'{file.name}'
-column= columns.available_columns(frame=frame)
+
+frame_data= FrameOperations(frame=frame)
 
 st.set_page_config(
     page_title="DataAnalysis",
@@ -27,30 +28,51 @@ with st.sidebar:
     st.subheader('🧮 Value Column')
     cols= st.selectbox(
         'Column to analyze', 
-        column, 
+        frame_data.available_columns(), 
         label_visibility='collapsed'
     )
     
     st.subheader('📊 Operation')
-    op= st.radio(
-        'Operation', 
-        columns.operations(), 
-        label_visibility='collapsed'
-    )
+    if cols in frame_data.numeric_columns(): 
+        op= st.radio(
+            'Operation', 
+            Streategies.operations_num(), 
+            label_visibility='collapsed'
+        )
+    elif cols in frame_data.categoric_columns(): 
+        op= st.radio(
+            'Operation', 
+            Streategies.operations_cat(), 
+            label_visibility='collapsed'
+        )
+    else: 
+        op= None
+        st.write(f'No available visualization for column {cols}')
     
     groups= st.subheader('🗂️ Group By')
+    available_to_group= [v for v in frame_data.available_columns() if v != cols]
     st.multiselect(
         'Group by', 
-        column, 
+        available_to_group, 
         label_visibility='collapsed'
     )
     
     st.subheader('🎨 Visualization')
-    vis= st.selectbox(
-        'plot type', 
-        columns.visualization(), 
-        label_visibility='collapsed'
-    )
+    if cols in frame_data.numeric_columns(): 
+            vis= st.selectbox(
+            'plot type', 
+            Streategies.visualization_num(), 
+            label_visibility='collapsed'
+        )
+    elif cols in frame_data.categoric_columns(): 
+            vis= st.selectbox(
+            'plot type', 
+            Streategies.visualization_cat(), 
+            label_visibility='collapsed'
+        )
+    else: 
+        vis= None
+        st.write(f'No available visualization for column {cols}')
     
     st.subheader('🔍 Filters')
     with st.expander('Filters', expanded=True): 
