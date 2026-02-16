@@ -75,9 +75,101 @@ with st.sidebar:
         st.write(f'No available visualization for column {cols}')
     
     st.subheader('🔍 Filters')
-    with st.expander('Filters', expanded=True): 
-        pass
+    num_cols= frame_data.numeric_columns()
+    cat_cols= frame_data.categoric_columns()
     
+    with st.expander('Filters', expanded=True): 
+        if cols in num_cols: 
+            min_val= float(frame[cols].min()) 
+            max_val= float(frame[cols].max())
+            
+            range_c= st.slider(
+                f'Range {cols}', 
+                min_value=min_val, 
+                max_value=max_val, 
+                value=(min_val, max_val), 
+                key=f'Auto_filter_{cols}'
+            )
+            
+            col1, col2= st.columns(2)
+            with col1: 
+                operator= st.selectbox(
+                    'Operator', 
+                    ['=', '>', '>=', '<', '<=', 'between'], 
+                    key='filter_custom_op_1'
+                )
+            with col2: 
+                if operator == 'between': 
+                    min_val_op= st.number_input('Min', key='min_op')
+                    max_val_op= st.number_input('Max', key='max_op')
+                    val= (min_val_op, max_val_op)
+                else: 
+                    val= st.number_input(
+                        'Value', 
+                        key=f'filter_custom_op_2'
+                    )
+            
+            if val: 
+                if operator == 'between': 
+                    if val[0] < min_val: 
+                        st.error(f'❎ Min {val[0]} < {min_val}. Range out of data')
+                    elif val[1] > max_val: 
+                        st.error(f'❎ Max {val[1]} > {max_val}. Range out of data')
+                    else: 
+                        st.success(f'✅ Valid range')
+                else: 
+                    if val < min_val or val > max_val: 
+                        st.error(f'❎ Range out of data. [{min_val}/{max_val}]')
+                    else: 
+                        st.success(f'✅ Valid range')
+                        
+        elif cols in cat_cols: 
+            unique_values= frame[cols].drop_nulls().drop_nans().unique().to_list()
+            
+            selection= st.multiselect(
+                f'Filter {cols}', 
+                unique_values, 
+                key=f'Auto_filter_{cols}'
+            )
+            
+            st.markdown(f'**Custom filter {cols}**')
+            search_v= st.text_input(
+                f'Filter value in {cols}', 
+                key= f'filter_custom_value_{cols}'
+            ).strip()
+            
+            if search_v: 
+                if search_v in unique_values: 
+                    st.success(f'✅ "{search_v}" exist in data')
+                    selection+= search_v
+                else: 
+                    st.error(f'❎ "{search_v}" doesnt exist in data')
+            
+        else: 
+            pass
+        
+        st.markdown(f'**Custom filter {cols}**')
+        
+        if 'num_filters_custom' not in st.session_state: 
+            st.session_state.num_filters_custom = 0
+        
+        col1_, col2_= st.sidebar.columns(2)
+        with col1_: 
+            if st.button('➕ Add filter'):
+                st.session_state.num_filters_custom+= 1
+        with col2_: 
+            if st.button('➖ Remove filter'): 
+                st.session_state.num_filters_custom-= 1
+        
+        for i in range(st.session_state.num_filters_custom): 
+            st.sidebar.divider()
+            
+            column_cus= st.sidebar.selectbox(
+                f'column per filter {i+1}', 
+                frame.columns, 
+                key=f'filter_cus_{cols}'
+            )
+        
 
 if dark_mode: 
     bg_color = "#0E1117"
