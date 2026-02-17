@@ -1,5 +1,5 @@
 import streamlit as st
-from src.streamlit.dynamic_functions import FrameOperations, Streategies
+from src.streamlit.dynamic_functions import FrameOperations, Streategies, Filter
 from main import data
 
 frame, file= data()
@@ -76,38 +76,67 @@ with st.sidebar:
     
     st.subheader('🔍 Filters')
     if 'filters' not in st.session_state: 
-        st.session_state.filters= {}
+        st.session_state.filters= []
     
     num_cols= frame_data.numeric_columns()
     cat_cols= frame_data.categoric_columns()
-    all_cols= frame.columns
     
-    if 'filters' not in st.session_state: 
-        st.session_state.filters= []
+    filter_class= Filter(frame=frame)
     
-    col1, col2= st.columns(2)
-    with col1: 
-        if st.button('➕ Add filter'):
-            st.session_state.filters.append({
-                'column': None, 
-                'type': None, 
-                'val': None
-            })
-    with col2: 
-        if st.button('➖ Remove filter'):
-            st.session_state.filters.pop()
+    add, remove= st.columns(2)
+    with add: 
+        if st.button('➕ Add filter'): 
+            st.session_state.filters.append(
+                f'Filter {len(st.session_state.filters) + 1}'
+            )
+    with remove: 
+        if st.button('➖ Remove filter'): 
+            if st.session_state.filters: 
+                st.session_state.filters.pop()
     
-    for i, filter_list in enumerate(st.session_state.filters): 
+    for i, filter_i in enumerate(st.session_state.filters): 
         st.divider()
-        st.markdown(f'**Filter {i+1}**')
+        st.write(f'📌 {filter_i}')
         
-        column= st.selectbox(
-            'Column', 
-            all_cols, 
-            key=f'filter_col_{i}'
+        col= st.selectbox(
+            f'Column {i+1}', 
+            available_to_group, 
+            key=f'col_{i}'
         )
         
-        
+        if col in num_cols: 
+            min_val= frame[col].min()
+            max_val= frame[col].max()
+            
+            personalize= st.checkbox('Personalize filter', key=f'personalize_{i}', value=True)
+            
+            if personalize: 
+                val= filter_class.filter_numeric_operator(
+                    col=col, 
+                    i=i, 
+                    min_val=min_val, 
+                    max_val=max_val
+                )
+            else: 
+                slider= filter_class.filter_numeric_slider(
+                    col=col, 
+                    i=i, 
+                    max_val=max_val, 
+                    min_val=min_val
+                )
+        elif col in cat_cols: 
+            unique_val= frame[col].drop_nans().drop_nulls().unique().to_list()
+            
+            search_or_select= filter_class.filter_categoric(
+                col=col, 
+                i=i, 
+                unique_val=unique_val
+            )
+        else: 
+            st.write('Not numeric or categoric')
+    
+    
+    
     
     
 
