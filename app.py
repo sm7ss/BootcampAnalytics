@@ -15,6 +15,7 @@ st.set_page_config(
 )
 
 st.title('📊 Data Analysis - Interactive')
+st.divider()
 
 with st.sidebar: 
     st.title('📊 Analysis Sidebar')
@@ -76,7 +77,10 @@ with st.sidebar:
     
     st.subheader('🔍 Filters')
     if 'filters' not in st.session_state: 
-        st.session_state.filters= []
+        st.session_state['filters']= []
+    
+    if 'filter_status' not in st.session_state:
+        st.session_state['filter_status']= []
     
     num_cols= frame_data.numeric_columns()
     cat_cols= frame_data.categoric_columns()
@@ -89,10 +93,6 @@ with st.sidebar:
             st.session_state.filters.append(
                 f'Filter {len(st.session_state.filters) + 1}'
             )
-    with remove: 
-        if st.button('➖ Remove filter'): 
-            if st.session_state.filters: 
-                st.session_state.filters.pop()
     
     for i, filter_i in enumerate(st.session_state.filters): 
         st.divider()
@@ -111,12 +111,18 @@ with st.sidebar:
             personalize= st.checkbox('Personalize filter', key=f'personalize_{i}', value=True)
             
             if personalize: 
-                val= filter_class.filter_numeric_operator(
+                dict_op_val= filter_class.filter_numeric_operator(
                     col=col, 
                     i=i, 
                     min_val=min_val, 
                     max_val=max_val
                 )
+                historical={
+                    'col': col, 
+                    'type': 'numeric_operator', 
+                    'value': dict_op_val.get('value') if dict_op_val else dict_op_val, 
+                    'operator': dict_op_val.get('operator') if dict_op_val else dict_op_val
+                }
             else: 
                 slider= filter_class.filter_numeric_slider(
                     col=col, 
@@ -124,6 +130,11 @@ with st.sidebar:
                     max_val=max_val, 
                     min_val=min_val
                 )
+                historical={
+                    'col': col, 
+                    'type': 'numeric_slider', 
+                    'value': slider
+                }
         elif col in cat_cols: 
             unique_val= frame[col].drop_nans().drop_nulls().unique().to_list()
             
@@ -132,13 +143,32 @@ with st.sidebar:
                 i=i, 
                 unique_val=unique_val
             )
+            historical= {
+                'col': col, 
+                'type': 'unique_categoric_value', 
+                'value': search_or_select
+            }
         else: 
             st.write('Not numeric or categoric')
+        
+        if st.button('🧹 Delete filter', key=f'delete_{i}'): 
+            st.session_state.filters.pop()
+            st.rerun()
+        else: 
+            if historical not in st.session_state.filter_status and historical.get('value'):
+                st.session_state.filter_status.append(historical)
     
-    
-    
-    
-    
+    if st.session_state.filter_status: 
+        st.markdown('📜 Filter history')
+        for i, state in enumerate(st.session_state.filter_status): 
+            if state.get('value'): 
+                st.info(f"""
+                    📌 Column: {state.get('col')}  \nType: {state.get('type')}  \nValue: {state.get('value')}
+                """)
+        
+        if st.button(f'🗞 Clear History Filter', key=f'clean_filter'): 
+            st.session_state.filter_status = []
+            st.rerun()
 
 if dark_mode: 
     bg_color = "#0E1117"
@@ -154,6 +184,13 @@ else:
     border_color = "#E0E0E0"
     sidebar_bg = "#E8EAEEE9"
     header_bg = "#FFFFFF"
+
+
+
+
+
+
+
 
 st.markdown(f"""
 <style>
@@ -253,24 +290,3 @@ st.markdown(f"""
         }}
 </style>
 """, unsafe_allow_html=True)
-
-st.divider()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
