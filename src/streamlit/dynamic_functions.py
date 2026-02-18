@@ -57,6 +57,7 @@ class Filter:
                 if st.button(f'Apply filter', key=f'button_{i}'): 
                     if write < min_val or write > max_val:
                         st.error(f'❎ Range out of values. Range >= {min_val} <= {max_val}')
+                        return None
                     else: 
                         st.success(f'✅ Filter in column {col} between {min_val} and {max_val}')
                         return write
@@ -80,9 +81,13 @@ class Filter:
         if st.button(f'Apply filter', key=f'button_{i}'): 
             if val < min_val or val > max_val: 
                 st.error(f'❎ Value out of range. Range >= {min_val} <= {max_val}')
+                return None
             else: 
                 st.success(f'✅ Filter in column {col} was applied')
-                return val
+                return {
+                    'operator': operator, 
+                    'value': val
+                }
     
     def filter_categoric(self, col: str, i: int, unique_val: List[str]): 
         search= st.checkbox(f'Search values', key=f'search_{i}')
@@ -92,6 +97,7 @@ class Filter:
             if st.button(f'Apply filter', key=f'button_{i}'): 
                 if search_value not in unique_val: 
                     st.error(f'❎ Value {search_value} not found in column {col}')
+                    return None
                 else: 
                     st.success(f'✅ Filter in column {col} was applied')
                     return search_value
@@ -104,8 +110,6 @@ class Filter:
             if st.button(f'Apply filter', key=f'button_{i}'):
                 st.success('✅ Filter was applied')
                 return selection
-        
-        
 
 
 
