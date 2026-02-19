@@ -50,9 +50,9 @@ with st.sidebar:
         op= None
         st.write(f'No available visualization for column {cols}')
     
-    groups= st.subheader('🗂️ Group By')
+    st.subheader('🗂️ Group By')
     available_to_group= [v for v in frame_data.available_columns() if v != cols]
-    st.multiselect(
+    groups= st.multiselect(
         'Group by', 
         available_to_group, 
         label_visibility='collapsed'
@@ -170,6 +170,59 @@ with st.sidebar:
             st.session_state.filter_status = []
             st.rerun()
 
+# LO SIGUIENTE SON FILTROS
+# st.session_state.filter_status
+
+with st.expander('🧮 Value Column Sample', expanded=True): 
+    st.caption(f'Sample of 10 rows from the Dataframe of {file.name}')
+    st.dataframe(frame.head(10), width='stretch')
+
+with st.expander('📊 Operation Result', expanded=True): 
+    result_op= frame_data.operation_result(col=cols, operator=op)
+    st.write(result_op)
+
+with st.expander(f'🗂️ Group By {cols.capitalize()}', expanded=True): 
+    if groups: 
+        grouped= frame_data.group_by_result(groups=groups, col=cols, operator=op)
+        st.caption(f'Grouped by: {groups}')
+        st.dataframe(grouped.head(1000), width='stretch')
+    else: 
+        st.info(f'Select a column in "Group By" to see the preview of {cols}')
+
+with st.expander('🎨 Visualization', expanded=True): 
+    st.caption(f'Type: {vis}')
+    if vis: 
+        figure= frame_data.visualization_filter(vis=vis, col=cols, frame_grouped=frame)
+        
+        if groups and vis != 'heatmap':
+            use_group_frame= st.checkbox('Apply grouping frame')
+            if use_group_frame: 
+                figure= frame_data.visualization_filter(vis=vis, col=cols, frame_grouped=grouped)
+                st.plotly_chart(figure, width='stretch')
+            else: 
+                st.plotly_chart(figure, width='stretch')
+        else:
+            figure= frame_data.visualization_filter(vis=vis, col=cols)
+            st.plotly_chart(figure, width='stretch', height=700)
+    else: 
+        st.info(f'Select a visualization plot in "Visualization" to see the plot for {cols}')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 if dark_mode: 
     bg_color = "#0E1117"
     text_color = "#FAFAFA"
@@ -184,13 +237,6 @@ else:
     border_color = "#E0E0E0"
     sidebar_bg = "#E8EAEEE9"
     header_bg = "#FFFFFF"
-
-
-
-
-
-
-
 
 st.markdown(f"""
 <style>
