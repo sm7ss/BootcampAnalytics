@@ -90,13 +90,19 @@ class Plots:
     
     def correlation_plot(self, frame: pl.DataFrame) -> go.Figure: 
         logger.info('The image of the correlation columns was created')
+        num= frame.select(pl.select(pl.selectors.numeric())).drop_nulls()
+        corr= num.corr()
+        columns= corr.columns
+        
         return px.imshow(
-            frame, 
+            corr.to_numpy(),
+            x=columns, 
+            y=columns,  
             text_auto=True, 
             color_continuous_scale=self.color_palet, 
-            template=self.template, 
+            template=self.template,
             title='Correlation Matrix'
-        )
+                )
 
 class JsonSaveInsights: 
     @staticmethod
