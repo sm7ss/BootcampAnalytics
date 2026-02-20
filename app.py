@@ -82,6 +82,9 @@ with st.sidebar:
     if 'filter_status' not in st.session_state:
         st.session_state['filter_status']= []
     
+    if 'filter_operations' not in st.session_state: 
+        st.session_state['filter_operations']= []
+    
     num_cols= frame_data.numeric_columns()
     cat_cols= frame_data.categoric_columns()
     
@@ -95,6 +98,7 @@ with st.sidebar:
             )
     
     for i, filter_i in enumerate(st.session_state.filters): 
+        n= 0
         st.divider()
         st.write(f'📌 {filter_i}')
         
@@ -111,52 +115,43 @@ with st.sidebar:
             personalize= st.checkbox('Personalize filter', key=f'personalize_{i}', value=True)
             
             if personalize: 
-                dict_op_val= filter_class.filter_numeric_operator(
+                dict_hist= filter_class.filter_numeric_operator(
                     col=col, 
                     i=i, 
                     min_val=min_val, 
                     max_val=max_val
                 )
-                historical={
-                    'col': col, 
-                    'type': 'numeric_operator', 
-                    'value': dict_op_val.get('value') if dict_op_val else dict_op_val, 
-                    'operator': dict_op_val.get('operator') if dict_op_val else dict_op_val
-                }
             else: 
-                slider= filter_class.filter_numeric_slider(
+                dict_hist= filter_class.filter_numeric_slider(
                     col=col, 
                     i=i, 
                     max_val=max_val, 
-                    min_val=min_val
+                    min_val=min_val, 
                 )
-                historical={
-                    'col': col, 
-                    'type': 'numeric_slider', 
-                    'value': slider
-                }
         elif col in cat_cols: 
             unique_val= frame[col].drop_nans().drop_nulls().unique().to_list()
             
-            search_or_select= filter_class.filter_categoric(
+            dict_hist= filter_class.filter_categoric(
                 col=col, 
                 i=i, 
                 unique_val=unique_val
             )
-            historical= {
-                'col': col, 
-                'type': 'unique_categoric_value', 
-                'value': search_or_select
-            }
         else: 
             st.write('Not numeric or categoric')
         
-        if st.button('🧹 Delete filter', key=f'delete_{i}'): 
-            st.session_state.filters.pop()
-            st.rerun()
-        else: 
-            if historical not in st.session_state.filter_status and historical.get('value'):
-                st.session_state.filter_status.append(historical)
+        if dict_hist and dict_hist.get('value') and dict_hist not in st.session_state.filter_status:
+            st.session_state.filter_status.append(dict_hist)
+        
+        if dict_hist and dict_hist.get('value') and dict_hist not in st.session_state.filter_operations: 
+            st.session_state.filter_operations.append(dict_hist)
+        
+        if st.button('Delete filter', key=f'delete_{i}'): 
+            try: 
+                st.session_state.filter_operations.pop()
+                st.session_state.filters.pop()
+                st.rerun()
+            except Exception as e: 
+                st.error('There are no active filters')
     
     if st.session_state.filter_status: 
         st.markdown('📜 Filter history')
@@ -169,9 +164,6 @@ with st.sidebar:
         if st.button(f'🗞 Clear History Filter', key=f'clean_filter'): 
             st.session_state.filter_status = []
             st.rerun()
-
-# LO SIGUIENTE SON FILTROS
-# st.session_state.filter_status
 
 with st.expander('🧮 Value Column Sample', expanded=True): 
     st.caption(f'Sample of 10 rows from the Dataframe of {file.name}')
@@ -192,22 +184,44 @@ with st.expander(f'🗂️ Group By {cols.capitalize()}', expanded=True):
 with st.expander('🎨 Visualization', expanded=True): 
     st.caption(f'Type: {vis}')
     if vis: 
-        figure= frame_data.visualization_filter(vis=vis, col=cols, frame_grouped=frame)
-        
-        if groups and vis != 'heatmap':
-            use_group_frame= st.checkbox('Apply grouping frame')
-            if use_group_frame: 
-                figure= frame_data.visualization_filter(vis=vis, col=cols, frame_grouped=grouped)
-                st.plotly_chart(figure, width='stretch')
+        if vis == 'heatmap':
+            st.caption('Select a numeric column. If no numeric column is selected, all numeric columns will be taken.')
+            
+            columns_heat_map= st.multiselect(
+                'Numeric Columns', 
+                num_cols.columns, 
+                label_visibility='collapsed'
+            )
+            
+            if len(columns_heat_map) == 1: 
+                st.info(f'At least two columns must be selected in order to calculate the correlation.')
+            elif len(columns_heat_map) > 1: 
+                figure= frame_data.visualization_filter(vis=vis, col=columns_heat_map)
+                st.plotly_chart(figure, width='stretch', height=700)
             else: 
-                st.plotly_chart(figure, width='stretch')
+                figure= frame_data.visualization_filter(vis=vis, col=num_cols.columns)
+                st.plotly_chart(figure, width='stretch',  height=700)
         else:
-            figure= frame_data.visualization_filter(vis=vis, col=cols)
-            st.plotly_chart(figure, width='stretch', height=700)
+            if groups: 
+                use_group_frame= st.checkbox('Apply grouping frame')
+                if use_group_frame: 
+                    figure= frame_data.visualization_filter(vis=vis, col=cols, frame_grouped=grouped)
+                    st.plotly_chart(figure, width='stretch')
+                else: 
+                    figure= frame_data.visualization_filter(vis=vis, col=cols)
+                    st.plotly_chart(figure, width='stretch')
+            else: 
+                figure= frame_data.visualization_filter(vis=vis, col=cols)
+                st.plotly_chart(figure, width='stretch')
     else: 
         st.info(f'Select a visualization plot in "Visualization" to see the plot for {cols}')
 
-
+with st.expander(f'🔍 Filter {cols.capitalize()}', expanded=True): 
+    st.write(st.session_state.filter_operations)
+    if st.session_state.filter_operations: 
+        pass
+    else: 
+        st.info('No filters available. Apply one or more filters.')
 
 
 
