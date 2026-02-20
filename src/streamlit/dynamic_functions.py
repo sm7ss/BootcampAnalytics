@@ -34,7 +34,7 @@ class FrameOperations:
                 case operations_strategies_num.COUNT: 
                     result= self.frame[col].count()
             result= float(result)
-            return f'{operator} of {col}. Result = {result:.2f}'
+            return f'{operator} of {col}. Result = {result:,.2f}'
         elif col in cat: 
             match operator.lower(): 
                 case operations_strategies_cat.UNIQUE: 
@@ -74,7 +74,7 @@ class FrameOperations:
                     title=f'Outliers_in_{col}'
                 )
             case visualization_strategies_num.HEATMAP: 
-                num= self.numeric_columns().drop_nulls()
+                num= self.frame[col].drop_nulls()
                 corr= num.corr()
                 columns= corr.columns
                 
@@ -92,8 +92,6 @@ class FrameOperations:
                         nbins=30,
                         title=f'Distribution: {col}'
                     )
-    
-    
 
 class Streategies:
     @staticmethod
@@ -129,7 +127,11 @@ class Filter:
             )
             if st.button(f'Apply filter', key=f'button_{i}'): 
                 st.success(f'✅ Filter in column {col} was applied')
-                return range_slider
+                return {
+                    'col': col, 
+                    'type': 'numeric_slider', 
+                    'value': range_slider
+                }
         else: 
             write= st.number_input(f'Input numeric value for {col}', key=f'input_numeric_{i}')
             if write: 
@@ -139,7 +141,11 @@ class Filter:
                         return None
                     else: 
                         st.success(f'✅ Filter in column {col} between {min_val} and {max_val}')
-                        return write
+                        return {
+                            'col': col, 
+                            'type': 'numeric_slider', 
+                            'value': write
+                        }
     
     def filter_numeric_operator(self, col: str, i: int, min_val: Union[int, float], max_val: Union[int, float]): 
         col_op, col_val= st.columns(2)
@@ -164,8 +170,10 @@ class Filter:
             else: 
                 st.success(f'✅ Filter in column {col} was applied')
                 return {
-                    'operator': operator, 
-                    'value': val
+                    'col': col, 
+                    'type': 'numeric_operator', 
+                    'value': val, 
+                    'operator': operator
                 }
     
     def filter_categoric(self, col: str, i: int, unique_val: List[str]): 
@@ -179,7 +187,11 @@ class Filter:
                     return None
                 else: 
                     st.success(f'✅ Filter in column {col} was applied')
-                    return search_value
+                    return {
+                        'col': col, 
+                        'type': 'unique_categoric_value', 
+                        'value': search_value
+                    }
         else: 
             selection= st.multiselect(
                 f'Select values in column {col}', 
@@ -188,4 +200,8 @@ class Filter:
             )
             if st.button(f'Apply filter', key=f'button_{i}'):
                 st.success('✅ Filter was applied')
-                return selection
+                return {
+                        'col': col, 
+                        'type': 'unique_categoric_value', 
+                        'value': selection
+                    }
