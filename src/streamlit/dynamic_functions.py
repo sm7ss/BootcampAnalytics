@@ -1,6 +1,6 @@
 from ..strategies.app_strategies import operations_strategies_cat, operations_strategies_num, visualization_strategies_num, visualization_strategies_cat
 import polars as pl
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Dict, Any, Tuple
 import streamlit as st
 import plotly.express as px
 
@@ -113,8 +113,9 @@ class Streategies:
 class Filter: 
     def __init__(self, frame: pl.DataFrame):
         self.frame= frame
+        self.operators= ['>', '>=', '<', '<=', '=']
     
-    def filter_numeric_slider(self, col: str, i: int, min_val: Union[int, float], max_val: Union[int, float]): 
+    def filter_numeric_slider(self, col: str, i: int, min_val: Union[int, float], max_val: Union[int, float]) -> Optional[Dict[str, Any]]: 
         slider= st.checkbox('Use range slider', key=f'use_slider_{i}')
         
         if slider: 
@@ -147,13 +148,13 @@ class Filter:
                             'value': write
                         }
     
-    def filter_numeric_operator(self, col: str, i: int, min_val: Union[int, float], max_val: Union[int, float]): 
+    def filter_numeric_operator(self, col: str, i: int, min_val: Union[int, float], max_val: Union[int, float]) -> Optional[Dict[str, Any]]: 
         col_op, col_val= st.columns(2)
         
         with col_op: 
             operator= st.selectbox(
                 'Operator', 
-                ['>', '>=', '<', '<=', '='], 
+                self.operators, 
                 key=f'op_{i}'
             )
         with col_val: 
@@ -176,7 +177,7 @@ class Filter:
                     'operator': operator
                 }
     
-    def filter_categoric(self, col: str, i: int, unique_val: List[str]): 
+    def filter_categoric(self, col: str, i: int, unique_val: List[str]) -> Optional[Dict[str, Any]]: 
         search= st.checkbox(f'Search values', key=f'search_{i}')
         
         if search: 
@@ -205,3 +206,28 @@ class Filter:
                         'type': 'unique_categoric_value', 
                         'value': selection
                     }
+
+class FilterResults:
+    def __init__(self, frame: pl.DataFrame):
+        self.frame= frame
+        self.operators= ['>', '>=', '<', '<=', '=']
+    
+    def slider_operation_filter_result(self, col: str, value: Tuple[Union[int, float]]) -> pl.Expr: 
+        min_v, max_v= value
+        return (pl.col(col) >= min_v & pl.col(col) <= max_v).alias(f'{col}_slider_value')
+    
+    def write_operation_filter_result(self, col: str, value: float) -> pl.Expr: 
+        return (pl.col(col) == value).alias(f'{col}_filtered_value')
+    
+    def input_operation_filter_result(self, col: str, value: float, operator: str) -> pl.Expr: 
+        return 
+    
+    def search_operation_filter_result(self) -> pl.Expr: 
+        pass
+    
+    def selection_operation_filter_result(self) -> pl.Expr: 
+        pass
+    
+    def operation_filter_result_run(self, dict_info: Dict[str, Any]) -> pl.DataFrame: 
+        pass
+    
