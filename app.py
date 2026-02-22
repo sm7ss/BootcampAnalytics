@@ -1,6 +1,7 @@
 import streamlit as st
 from src.streamlit.dynamic_functions import FrameOperations, Streategies, Filter
 from main import data
+from datetime import datetime
 
 frame, file= data()
 data_name= f'{file.name}'
@@ -139,8 +140,10 @@ with st.sidebar:
         else: 
             st.write('Not numeric or categoric')
         
-        if dict_hist and dict_hist.get('value') and dict_hist not in st.session_state.filter_status:
-            st.session_state.filter_status.append(dict_hist)
+        if dict_hist and dict_hist.get('value'):
+            status= dict_hist.copy()
+            status['timestamp']=datetime.now().strftime('%H:%M:%S')
+            st.session_state.filter_status.append(status)
         
         if dict_hist and dict_hist.get('value') and dict_hist not in st.session_state.filter_operations: 
             st.session_state.filter_operations.append(dict_hist)
@@ -158,7 +161,7 @@ with st.sidebar:
         for i, state in enumerate(st.session_state.filter_status): 
             if state.get('value'): 
                 st.info(f"""
-                    📌 Column: {state.get('col')}  \nType: {state.get('type')}  \nValue: {state.get('value')}
+                    📌 Column: {state.get('col')}  \nType: {state.get('type')}  \nValue: {state.get('value')}  \nTime: {state.get('timestamp')}
                 """)
         
         if st.button(f'🗞 Clear History Filter', key=f'clean_filter'): 
