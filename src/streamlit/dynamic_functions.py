@@ -144,7 +144,7 @@ class Filter:
                         st.success(f'✅ Filter in column {col} between {min_val} and {max_val}')
                         return {
                             'col': col, 
-                            'type': 'numeric_slider', 
+                            'type': 'numeric_write', 
                             'value': write
                         }
     
@@ -203,7 +203,7 @@ class Filter:
                 st.success('✅ Filter was applied')
                 return {
                         'col': col, 
-                        'type': 'unique_categoric_value', 
+                        'type': 'selection_categoric_value', 
                         'value': selection
                     }
 
@@ -214,20 +214,50 @@ class FilterResults:
     
     def slider_operation_filter_result(self, col: str, value: Tuple[Union[int, float]]) -> pl.Expr: 
         min_v, max_v= value
-        return (pl.col(col) >= min_v & pl.col(col) <= max_v).alias(f'{col}_slider_value')
+        return (pl.col(col).is_between(min_v, max_v)).alias(f'{col}_slider_value')
     
     def write_operation_filter_result(self, col: str, value: float) -> pl.Expr: 
         return (pl.col(col) == value).alias(f'{col}_filtered_value')
     
     def input_operation_filter_result(self, col: str, value: float, operator: str) -> pl.Expr: 
-        return 
+        if operator == '>': 
+            return (pl.col(col) > value).alias(f'{col}_greater_{value}')
+        elif operator == '>=': 
+            return (pl.col(col) >= value).alias(f'{col}_greater_equal_{value}')
+        elif operator == '<': 
+            return (pl.col(col) < value).alias(f'{col}_less_{value}')
+        elif operator == '<=': 
+            return (pl.col(col) <= value).alias(f'{col}_less_equal_{value}')
+        elif operator == '=': 
+            return (pl.col(col) == value).alias(f'{col}_equal_{value}')
     
-    def search_operation_filter_result(self) -> pl.Expr: 
-        pass
+    def search_operation_filter_result(self, col: str, value: str) -> pl.Expr: 
+        return (pl.col(col) == value).alias(f'{col}_filtered_{value}')
     
-    def selection_operation_filter_result(self) -> pl.Expr: 
-        pass
+    def selection_operation_filter_result(self, col: str, value: Union[str, List[str]]) -> pl.Expr: 
+        if isinstance(value, str):
+            return (pl.col(col) == value)
+        else: 
+            return (pl.col(col).is_in(value)).alias(f'{col}_selection_filtered')
     
     def operation_filter_result_run(self, dict_info: Dict[str, Any]) -> pl.DataFrame: 
-        pass
-    
+        col= dict_info.get('col')
+        value= dict_info.get('value')
+        type_op= dict_info.get('type')
+        
+        if type_op == 'numeric_slider': 
+            expr= self.slider_operation_filter_result(col=col, value=value)
+            return self.frame.filter(expr)
+        elif type_op == 'numeric_write': 
+            expr= self.write_operation_filter_result(col=col, value=value)
+            return self.frame.filter(expr)
+        elif type_op == 'numeric_operator': 
+            op= dict_info.get('operator')
+            expr= self.input_operation_filter_result(col=col, value=value, operator=op)
+            return self.frame.filter(expr)
+        elif type_op == 'unique_categoric_value': 
+            expr= self.search_operation_filter_result(col=col, value=value)
+            return self.frame.filter(expr)
+        elif type_op == 'selection_categoric_value': 
+            expr= self.selection_operation_filter_result(col=col, value=value)
+            return self.frame.filter(expr)
