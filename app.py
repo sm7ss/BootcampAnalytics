@@ -1,5 +1,5 @@
 import streamlit as st
-from src.streamlit.dynamic_functions import FrameOperations, Streategies, Filter
+from src.streamlit.dynamic_functions import FrameOperations, Streategies, Filter, FilterResults
 from main import data
 from datetime import datetime
 
@@ -7,6 +7,7 @@ frame, file= data()
 data_name= f'{file.name}'
 
 frame_data= FrameOperations(frame=frame)
+frame_filtered= FilterResults(frame=frame)
 
 st.set_page_config(
     page_title="DataAnalysis",
@@ -105,7 +106,7 @@ with st.sidebar:
         
         col= st.selectbox(
             f'Column {i+1}', 
-            available_to_group, 
+            frame_data.available_columns(), 
             key=f'col_{i}'
         )
         
@@ -220,25 +221,24 @@ with st.expander('🎨 Visualization', expanded=True):
         st.info(f'Select a visualization plot in "Visualization" to see the plot for {cols}')
 
 with st.expander(f'🔍 Filter {cols.capitalize()}', expanded=True): 
-    st.write(st.session_state.filter_operations)
     if st.session_state.filter_operations: 
-        pass
+        i= 0
+        for dict_expr in st.session_state.filter_operations: 
+            i+= 1
+            ff=frame_filtered.operation_filter_result_run(dict_info=dict_expr) 
+            st.write(f'Data available after filtering: {ff.height}/{frame.height}')
+            st.dataframe(ff)
+            if st.button('Delete filter', key=f'delete_{i}_values'): 
+                try: 
+                    st.session_state.filter_operations.pop()
+                    st.session_state.filters.pop()
+                    st.rerun()
+                except Exception as e: 
+                    st.error('There are no active filters')
+                    st.rerun()
+            st.divider()
     else: 
         st.info('No filters available. Apply one or more filters.')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 if dark_mode: 
     bg_color = "#0E1117"
