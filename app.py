@@ -225,8 +225,9 @@ with st.expander(f'🔍 Filter {cols.capitalize()}', expanded=True):
         i= 0
         for dict_expr in st.session_state.filter_operations: 
             i+= 1
-            ff=frame_filtered.operation_filter_result_run(dict_info=dict_expr) 
-            st.write(f'Data available after filtering: {ff.height}/{frame.height}')
+            ff=frame_filtered.operation_filter_result_run(dict_info=dict_expr)
+            percent= ff.height/frame.height
+            st.write(f'Data available after filtering: {ff.height}/{frame.height} filas ({percent:.2%})')
             st.dataframe(ff)
             if st.button('Delete filter', key=f'delete_{i}_values'): 
                 try: 
@@ -350,6 +351,8 @@ st.markdown(f"""
     [data-testid="stSidebar"] h3 {{
         margin-top: 0rem !important;
         padding-top: 0rem !important;
-        }}
+    }}
+    
+    
 </style>
 """, unsafe_allow_html=True)
