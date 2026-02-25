@@ -8,24 +8,9 @@ file= config.data.input_path
 
 frame= get_frame(file=file)
 
-Analysis(frame=frame, config=config).run_analysis()
+def analysis() -> None: 
+    Analysis(frame=frame, config=config).run_analysis()
 
 def data() -> List[Any]: 
     return [frame, file]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
