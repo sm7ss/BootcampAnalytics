@@ -21,8 +21,12 @@ class data_validation(BaseModel):
         path= Path(v)
         
         if not path.exists(): 
-            logger.error(f'The file {path.name} does not exist')
-            raise FileNotFoundError(f'The file {path.name} does not exist')
+            path= Path(__file__).resolve().parent.parent.parent
+            path= path / 'data' / 'vehicles_us.csv'
+            
+            if not path.exists():
+                logger.error(f'The file {path.name} does not exist')
+                raise FileNotFoundError(f'The file {path.name} does not exist')
         
         if path.suffix != '.csv': 
             logger.error('Only CSV files are supported')
