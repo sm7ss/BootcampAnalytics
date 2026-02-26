@@ -11,6 +11,8 @@ frame= get_frame(file=file)
 def analysis() -> None: 
     Analysis(frame=frame, config=config).run_analysis()
 
+analysis()
+
 def data() -> List[Any]: 
     return [frame, file]
 
