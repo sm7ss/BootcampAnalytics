@@ -37,6 +37,8 @@ Una app en Streamlit que te permite:
 - Visualizaciones que se actualizan en tiempo real
 - Historial de filtros 
 
+App Link: https://prism-77em.onrender.com
+
 ## 🚀 Ejemplo Rápido
 
 ### **Con 3 líneas en terminal:**
