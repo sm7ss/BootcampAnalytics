@@ -1,5 +1,5 @@
 from pydantic import field_validator, model_validator, Field, BaseModel
-from typing import List, Dict, Any, Literal
+from typing import List, Dict, Any, Union
 import plotly.express as px 
 from pathlib import Path
 import polars as pl
@@ -22,7 +22,7 @@ class data_validation(BaseModel):
         
         if not path.exists(): 
             path= Path(__file__).resolve().parent.parent.parent
-            path= path / 'data' / 'vehicles_us.csv'
+            path= path / 'data' / v
             
             if not path.exists():
                 logger.error(f'The file {path.name} does not exist')
@@ -85,7 +85,7 @@ class analysis_config_validation(BaseModel):
     output: output_validation
 
 class data_analysis_validation(BaseModel): 
-    representative_columns: List[str]
+    representative_columns: Union[List[str], str, None]
     auto_insights: bool
     insight_questions: List[Dict[str, Any]]
 
