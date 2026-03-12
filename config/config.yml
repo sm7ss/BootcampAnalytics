@@ -1,5 +1,5 @@
 data: 
-  input_path: 'data/vehicles_us.csv' #Just accept csv files
+  input_path: 'vehicles_us.csv' #Just accept csv files
   sample: 0.1
   encoding: 'utf-8' 
 
